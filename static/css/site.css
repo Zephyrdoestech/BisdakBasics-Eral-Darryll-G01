@@ -59,19 +59,7 @@ button, input { font: inherit; }
 .hero-note { margin: 18px 0 0; color: var(--muted); font-size: .98rem; }
 .welcome-card { align-self: stretch; display: flex; min-height: 450px; flex-direction: column; justify-content: center; padding: 34px 38px; background: #fff; border-radius: 32px; }
 .welcome-card__art { position: relative; display: flex; min-height: 210px; align-items: center; justify-content: center; overflow: hidden; }
-.bito-hero { position: relative; z-index: 2; width: 150px; height: 132px; object-fit: contain; filter: drop-shadow(0 8px 4px rgb(18 63 67 / 10%)); }
-.learning-path-art { position: absolute; right: 4%; bottom: 12px; left: 4%; display: flex; height: 66px; align-items: center; justify-content: space-between; padding: 0 6%; background: #22c2b0; border-radius: 50% 28% 42% 45% / 35% 48% 44% 50%; transform: rotate(-3deg); }
-.path-node { display: grid; width: 56px; height: 56px; place-items: center; color: var(--green-dark); background: #e6fbf2; border: 6px solid #c5eee2; border-radius: 50%; transform: rotate(3deg); }
-.path-node--book { background: #fff5ce; border-color: #ffdb68; }
-.path-node--chat { width: 48px; height: 48px; border-radius: 17px; }
-.path-node--cup { background: #ffe7dd; border-color: #ffc5b5; }
-.book-icon { font-size: 1.7rem; font-weight: 900; }
-.chat-dots { color: var(--green); font-size: 1.5rem; letter-spacing: .08em; }
-.cup-icon { width: 19px; height: 24px; background: var(--coral); border-radius: 3px 3px 7px 7px; }
-.finish-flag { color: #f3bc35; font-size: 1.6rem; }
-.sparkle { position: absolute; z-index: 1; color: #ffc94e; font-size: 1.65rem; }
-.sparkle--one { top: 28px; left: 17%; }
-.sparkle--two { top: 54px; right: 14%; font-size: 1.1rem; }
+.journey-illustration { width: min(100%, 340px); height: auto; object-fit: contain; }
 .welcome-card__copy { position: relative; z-index: 3; }
 .phrase-label { margin: 4px 0 8px; color: var(--green-dark); font-size: .86rem; font-weight: 800; }
 .welcome-card h2 { margin: 0; color: var(--ink); font-size: clamp(1.8rem, 2.7vw, 2.8rem); letter-spacing: -.04em; line-height: 1.15; }
@@ -218,10 +206,6 @@ button, input { font: inherit; }
   .hero-note { margin-top: 13px; font-size: .88rem; }
   .welcome-card { min-height: 350px; padding: 20px; border-radius: 22px; }
   .welcome-card__art { min-height: 175px; }
-  .bito-hero { width: 125px; height: 110px; }
-  .learning-path-art { height: 52px; }
-  .path-node { width: 45px; height: 45px; border-width: 4px; }
-  .path-node--chat { width: 41px; height: 41px; }
   .topics-section, .steps-section { padding-top: 53px; }
   .section-heading { margin-bottom: 19px; }
   .section-heading h2 { font-size: 2.05rem; }

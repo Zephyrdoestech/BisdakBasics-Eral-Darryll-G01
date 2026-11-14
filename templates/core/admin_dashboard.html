@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Administrator dashboard | Bisdak Basics{% endblock %}
+{% block body_class %}dashboard-page dashboard-page--admin{% endblock %}
+{% block content %}
+<div class="dashboard-shell">
+  <header class="dashboard-header page-width">
+    <a class="brand" href="{% url 'core:home' %}">
+      <img class="brand__logo" src="{% static 'images/bito-flying-fish.png' %}" alt="">
+      <span>Bisdak Basics</span>
+    </a>
+    <div class="dashboard-header__user">
+      <span class="role-pill role-pill--admin">Administrator</span>
+      <span class="user-name">{{ request.user.get_full_name|default:request.user.username }}</span>
+      <form method="post" action="{% url 'accounts:logout' %}">{% csrf_token %}<button class="text-button" type="submit">Log out</button></form>
+    </div>
+  </header>
+  <main class="dashboard-main page-width" id="main-content">
+    <section class="admin-welcome">
+      <p class="eyebrow">Administrator overview</p>
+      <h1>Welcome, {{ request.user.first_name|default:request.user.username }}.</h1>
+      <p>Manage the learning experience and keep an eye on the community.</p>
+    </section>
+    <section class="admin-stats" aria-label="System overview">
+      <article class="admin-stat"><span class="eyebrow">Registered learners</span><strong>{{ learner_count }}</strong><span>Accounts with the learner role</span></article>
+      <article class="admin-stat"><span class="eyebrow">Lesson completion</span><strong>—</strong><span>Progress tracking is coming soon</span></article>
+      <article class="admin-stat"><span class="eyebrow">Quiz performance</span><strong>—</strong><span>Assessments are coming soon</span></article>
+      <article class="admin-stat"><span class="eyebrow">Requests to review</span><strong>—</strong><span>Community requests are coming soon</span></article>
+    </section>
+    <section class="dashboard-panel admin-empty">
+      <div>
+        <p class="eyebrow">Content management</p>
+        <h2>Your learning library is ready to grow.</h2>
+        <p>Lesson, phrase, quiz, and request management will appear here as those parts of Bisdak Basics are built.</p>
+      </div>
+      <a class="button button--outline" href="{% url 'admin:index' %}">Open Django admin <span aria-hidden="true">→</span></a>
+    </section>
+  </main>
+</div>
+{% endblock %}

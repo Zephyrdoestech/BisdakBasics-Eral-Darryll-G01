@@ -28,6 +28,10 @@ class User(AbstractUser):
     class Meta:
         constraints = [
             models.UniqueConstraint(
+                Lower("username"),
+                name="accounts_user_username_case_insensitive_unique",
+            ),
+            models.UniqueConstraint(
                 Lower("email"),
                 name="accounts_user_email_case_insensitive_unique",
             ),

@@ -1,0 +1,153 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Bisdak Basics | Practical Cebuano for everyday life{% endblock %}
+{% block body_class %}home-page{% endblock %}
+
+{% block content %}
+<header class="site-header">
+  <div class="site-header__main page-width">
+    <a class="brand" href="{% url 'core:home' %}" aria-label="Bisdak Basics home">
+      <img class="brand__logo" src="{% static 'images/bito-flying-fish.png' %}" alt="">
+      <span>Bisdak Basics</span>
+    </a>
+    <p class="header-motto">A little Bisaya. A little closer.</p>
+    <nav class="header-actions" aria-label="Account navigation">
+      {% if request.user.is_authenticated %}
+        <a class="button button--outline" href="{% url 'core:dashboard_redirect' %}">My Dashboard</a>
+        <form method="post" action="{% url 'accounts:logout' %}">{% csrf_token %}<button class="button button--primary" type="submit">Log Out</button></form>
+      {% else %}
+        <a class="button button--outline" href="{% url 'accounts:login' %}">Log In</a>
+        <a class="button button--primary" href="{% url 'accounts:register' %}">Get Started</a>
+      {% endif %}
+    </nav>
+  </div>
+  <p class="site-header__tagline page-width">Practical language. Real connections.</p>
+</header>
+
+<main id="main-content">
+  <section class="hero-section page-width" aria-labelledby="hero-title">
+    <div class="hero-copy">
+      <p class="eyebrow">Cebuano / Bisaya <span aria-hidden="true">·</span> made for everyday</p>
+      <h1 id="hero-title">Small steps.<br>Real conversations.</h1>
+      <p class="hero-copy__description">Learn practical Cebuano for ordering lunch, meeting someone new, and finding your way. Build confidence, one little win at a time.</p>
+      <a class="button button--primary button--large" href="{% url 'accounts:register' %}">Get Started <span aria-hidden="true">→</span></a>
+      <p class="hero-note">Free to begin. Beginner-friendly. Always your pace.</p>
+    </div>
+
+    <div class="welcome-card" aria-label="A preview of learning with Bisdak Basics">
+      <div class="welcome-card__art" aria-hidden="true">
+        <span class="sparkle sparkle--one">✦</span>
+        <span class="sparkle sparkle--two">✦</span>
+        <div class="learning-path-art">
+          <span class="path-node path-node--book"><span class="book-icon">▱</span></span>
+          <span class="path-node path-node--chat"><span class="chat-dots">•••</span></span>
+          <span class="path-node path-node--cup"><span class="cup-icon"></span></span>
+          <span class="path-node path-node--finish"><span class="finish-flag">⚑</span></span>
+        </div>
+        <img class="bito-hero" src="{% static 'images/bito-flying-fish.png' %}" alt="">
+      </div>
+      <div class="welcome-card__copy">
+        <p class="phrase-label">Your first little connection</p>
+        <h2>Maayong buntag!</h2>
+        <p class="translation">Good morning!</p>
+        <div class="audio-preview"><span class="audio-preview__icon" aria-hidden="true">▶</span> Native-speaker audio in lessons</div>
+        <p class="welcome-card__guide">Meet Bito, your friendly guide along the way.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="topics-section page-width" id="topics" aria-labelledby="topics-title">
+    <div class="section-heading">
+      <h2 id="topics-title">Useful words. Familiar moments.</h2>
+      <p>Start with what you want to say, not a page of rules.</p>
+    </div>
+    <div class="topic-grid">
+      <article class="topic-card topic-card--mint">
+        <p class="eyebrow">01 / Say hello</p>
+        <h3>Greetings</h3>
+        <p class="topic-card__phrase">Maayong buntag!</p>
+        <p class="translation">Good morning!</p>
+        <a class="topic-card__link" href="{% url 'accounts:register' %}">Explore <span aria-hidden="true">→</span></a>
+      </article>
+      <article class="topic-card topic-card--blue">
+        <p class="eyebrow">02 / At the table</p>
+        <h3>Ordering food</h3>
+        <p class="topic-card__phrase">Tubig, palihog.</p>
+        <p class="translation">Water, please.</p>
+        <a class="topic-card__link" href="{% url 'accounts:register' %}">Explore <span aria-hidden="true">→</span></a>
+      </article>
+      <article class="topic-card topic-card--peach">
+        <p class="eyebrow">03 / Find your way</p>
+        <h3>Asking for directions</h3>
+        <p class="topic-card__phrase">Asa ang kasilyas?</p>
+        <p class="translation">Where is the restroom?</p>
+        <a class="topic-card__link" href="{% url 'accounts:register' %}">Explore <span aria-hidden="true">→</span></a>
+      </article>
+      <article class="topic-card topic-card--yellow">
+        <p class="eyebrow">04 / At the market</p>
+        <h3>Market transactions</h3>
+        <p class="topic-card__phrase">Tagpila ni?</p>
+        <p class="translation">How much is this?</p>
+        <a class="topic-card__link" href="{% url 'accounts:register' %}">Explore <span aria-hidden="true">→</span></a>
+      </article>
+    </div>
+  </section>
+
+  <section class="steps-section page-width" aria-labelledby="steps-title">
+    <div class="section-heading">
+      <h2 id="steps-title">A little practice goes a long way.</h2>
+    </div>
+    <div class="steps-grid">
+      <article class="step-card">
+        <span class="step-number">1</span>
+        <h3>Learn a useful phrase</h3>
+        <p>Short lessons for real situations.</p>
+      </article>
+      <article class="step-card">
+        <span class="step-number">2</span>
+        <h3>Listen. Say it. Try again.</h3>
+        <p>Hear native speakers and practice aloud.</p>
+      </article>
+      <article class="step-card">
+        <span class="step-number">3</span>
+        <h3>Celebrate your progress</h3>
+        <p>Build a streak and see how far you have come.</p>
+      </article>
+    </div>
+  </section>
+
+  <section class="progress-promo page-width" aria-labelledby="progress-title">
+    <div class="progress-promo__copy">
+      <p class="eyebrow">Look how far you can go</p>
+      <h2 id="progress-title">Every small win counts.</h2>
+      <p>A clear learning path, gentle checkpoints, and a guide who’s cheering you on — without the pressure.</p>
+      <a class="button button--sunshine" href="{% url 'accounts:register' %}">Start my learning journey <span aria-hidden="true">→</span></a>
+    </div>
+    <div class="sample-week" aria-label="An example of a learner's first week">
+      <p class="sample-week__title">A sample learning week</p>
+      <div class="sample-week__stats">
+        <span class="sample-stat sample-stat--peach">5-day streak</span>
+        <span class="sample-stat sample-stat--yellow"><span aria-hidden="true">★</span> 240 XP</span>
+      </div>
+      <ul class="sample-week__list">
+        <li>Your first conversation</li>
+        <li>A lesson a day</li>
+        <li>A little more confidence</li>
+      </ul>
+    </div>
+  </section>
+</main>
+
+<footer class="site-footer page-width">
+  <div>
+    <a class="footer-brand" href="{% url 'core:home' %}">Bisdak Basics</a>
+    <p>Everyday Cebuano. A little closer, every day.</p>
+  </div>
+  <nav class="footer-links" aria-label="Footer navigation">
+    <a href="#topics">Explore topics</a>
+    <a href="{% url 'accounts:login' %}">Log in</a>
+    <a href="{% url 'accounts:register' %}">Create an account</a>
+  </nav>
+</footer>
+{% endblock %}

@@ -4,7 +4,7 @@ Bisdak Basics is a Django web application for learning practical Cebuano/Bisaya.
 
 ## Current checkpoint
 
-This checkpoint adds the account data foundation: a custom user model with learner and administrator roles, case-insensitive unique email addresses, and a one-to-one profile for contact details. Account registration, authentication pages, role dashboards, and profile forms are planned for later checkpoints.
+The current checkpoint includes a responsive public homepage, learner registration and login/logout, and role-protected starter dashboards. The custom user model supports learner and administrator roles with case-insensitive unique usernames and email addresses. Dashboard progress and learning content are shown as honest empty states until those features are added. Profile editing and lesson, phrasebook, and quiz features remain future checkpoints.
 
 ## Requirements
 

@@ -1,0 +1,33 @@
+{% extends "accounts/auth_base.html" %}
+
+{% block title %}Create your account | Bisdak Basics{% endblock %}
+{% block auth_heading %}Your next conversation starts here.{% endblock %}
+{% block auth_description %}Join Bisdak Basics and take your first small step toward practical Cebuano.{% endblock %}
+{% block form_title %}Create your account{% endblock %}
+{% block form_intro %}Start learning at your own pace. It’s free to begin.{% endblock %}
+
+{% block auth_form %}
+<form method="post" class="auth-form" novalidate>
+  {% csrf_token %}
+  {% if form.non_field_errors %}
+    <div class="form-errors" role="alert">{{ form.non_field_errors }}</div>
+  {% endif %}
+  <div class="form-grid form-grid--two">
+    {% for field in form %}
+      <div class="form-field{% if field.name == 'password1' or field.name == 'password2' or field.name == 'email' %} form-field--wide{% endif %}">
+        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+        <div class="input-wrap">
+          {{ field }}
+          {% if field.field.widget.input_type == 'password' %}
+            <button class="password-toggle" type="button" data-password-toggle="{{ field.id_for_label }}" aria-label="Show {{ field.label|lower }}">Show</button>
+          {% endif %}
+        </div>
+        {% if field.help_text %}<div class="field-help">{{ field.help_text }}</div>{% endif %}
+        {% if field.errors %}<div class="field-error" role="alert">{{ field.errors }}</div>{% endif %}
+      </div>
+    {% endfor %}
+  </div>
+  <button class="button button--primary button--full" type="submit">Create account <span aria-hidden="true">→</span></button>
+  <p class="auth-switch">Already have an account? <a href="{% url 'accounts:login' %}">Log in</a></p>
+</form>
+{% endblock %}

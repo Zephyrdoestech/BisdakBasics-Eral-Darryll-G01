@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block body_class %}auth-page{% endblock %}
+{% block content %}
+<header class="auth-header page-width">
+  <a class="brand" href="{% url 'core:home' %}" aria-label="Bisdak Basics home">
+    <img class="brand__logo" src="{% static 'images/bito-flying-fish.png' %}" alt="">
+    <span>Bisdak Basics</span>
+  </a>
+  <a class="auth-header__home" href="{% url 'core:home' %}">Back to home</a>
+</header>
+<main class="auth-layout page-width" id="main-content">
+  <section class="auth-aside">
+    <p class="eyebrow">Practical language. Real connections.</p>
+    <h1>{% block auth_heading %}A little Bisaya. A little closer.{% endblock %}</h1>
+    <p>{% block auth_description %}Build confidence for the everyday moments that bring people together.{% endblock %}</p>
+    <img class="auth-aside__bito" src="{% static 'images/bito-flying-fish.png' %}" alt="Bito, the Bisdak Basics guide">
+  </section>
+  <section class="auth-card" aria-labelledby="auth-title">
+    <div class="auth-card__heading">
+      <h2 id="auth-title">{% block form_title %}{% endblock %}</h2>
+      <p>{% block form_intro %}{% endblock %}</p>
+    </div>
+    {% block auth_form %}{% endblock %}
+  </section>
+</main>
+{% endblock %}

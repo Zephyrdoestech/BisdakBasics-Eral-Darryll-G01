@@ -140,6 +140,36 @@ button, input { font: inherit; }
 .auth-switch a { color: var(--green-dark); font-weight: 850; text-decoration: none; }
 .auth-switch a:hover { text-decoration: underline; }
 
+.signup-page { min-height: 100vh; background: var(--page); }
+.signup-main { padding-block: 55px 72px; }
+.signup-heading { margin-bottom: 28px; }
+.signup-heading h1 { margin: 0; color: var(--ink); font-size: clamp(3rem, 5.3vw, 5.1rem); font-weight: 900; letter-spacing: -.065em; line-height: 1.06; }
+.signup-heading p { margin: 22px 0 0; color: var(--muted); font-size: clamp(1.1rem, 1.5vw, 1.45rem); }
+.signup-grid { display: grid; grid-template-columns: minmax(0, .92fr) minmax(0, 1.45fr); gap: 38px; align-items: stretch; }
+.signup-card { padding: 34px; background: #fff; border-radius: 28px; }
+.signup-card h2 { margin: 0 0 22px; color: var(--ink); font-size: 2rem; font-weight: 900; letter-spacing: -.045em; }
+.signup-form { display: grid; gap: 17px; }
+.signup-field { min-width: 0; }
+.signup-field label { display: block; margin-bottom: 7px; color: var(--ink); font-size: .98rem; font-weight: 800; }
+.signup-field label span { color: var(--green-dark); }
+.signup-input-wrap { position: relative; }
+.signup-input-wrap .form-control { min-height: 54px; border-radius: 13px; font-size: 1rem; }
+.signup-input-wrap:has(.password-toggle) .form-control { padding-right: 72px; }
+.signup-input-wrap .password-toggle { right: 15px; font-size: .96rem; font-weight: 600; }
+.signup-help { margin: 7px 0 0; color: var(--muted); font-size: .88rem; }
+.signup-terms { margin: 2px 0 0; color: var(--muted); font-size: .88rem; line-height: 1.5; }
+.signup-submit { min-height: 58px; margin-top: 2px; }
+.signup-login { min-height: 54px; margin-top: 0; }
+.signup-story { display: flex; min-height: 100%; flex-direction: column; align-items: flex-start; padding: clamp(32px, 4vw, 54px); background: #e1f8ef; border-radius: 28px; }
+.signup-story__bito { width: 104px; height: 90px; margin-bottom: 20px; object-fit: contain; }
+.signup-story h2 { margin: 0; color: var(--ink); font-size: clamp(2.55rem, 4vw, 4rem); font-weight: 900; letter-spacing: -.06em; line-height: 1.12; }
+.signup-story__description { max-width: 620px; margin: 20px 0 18px; color: var(--muted); font-size: clamp(1rem, 1.4vw, 1.25rem); line-height: 1.55; }
+.signup-steps { display: grid; gap: 7px; margin: 0; padding: 0; color: var(--green-dark); font-size: clamp(1rem, 1.35vw, 1.2rem); list-style: none; }
+.signup-steps li { display: flex; align-items: baseline; gap: 12px; }
+.signup-steps span { color: var(--green-dark); font-variant-numeric: tabular-nums; }
+.signup-story h3 { margin: auto 0 10px; padding-top: 42px; color: var(--ink); font-size: 1.32rem; font-weight: 850; }
+.signup-story__tip { margin: 0; color: var(--green-dark); font-weight: 800; }
+
 .dashboard-page { min-height: 100vh; background: #f4faf7; }
 .dashboard-shell { min-height: 100vh; }
 .dashboard-header { display: flex; min-height: 82px; align-items: center; justify-content: space-between; padding-block: 14px; border-bottom: 1px solid var(--line); }
@@ -187,6 +217,9 @@ button, input { font: inherit; }
   .topic-card { min-height: 240px; }
   .auth-layout { gap: 40px; grid-template-columns: minmax(0, 1fr) minmax(390px, .95fr); }
   .admin-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .signup-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); gap: 24px; }
+  .signup-card { padding: 27px; }
+  .signup-story { padding: 30px; }
 }
 
 @media (max-width: 720px) {
@@ -240,6 +273,21 @@ button, input { font: inherit; }
   .form-grid--two { grid-template-columns: 1fr; }
   .form-field--wide { grid-column: auto; }
   .auth-form { gap: 14px; }
+
+  .signup-main { padding-block: 34px 45px; }
+  .signup-heading { margin-bottom: 21px; }
+  .signup-heading h1 { font-size: clamp(2.5rem, 9.5vw, 3.5rem); }
+  .signup-heading p { margin-top: 12px; font-size: 1rem; }
+  .signup-grid { grid-template-columns: 1fr; gap: 16px; }
+  .signup-card { padding: 24px 20px; border-radius: 22px; }
+  .signup-card h2 { margin-bottom: 18px; font-size: 1.7rem; }
+  .signup-form { gap: 15px; }
+  .signup-story { min-height: 0; padding: 25px 22px; border-radius: 22px; }
+  .signup-story__bito { width: 80px; height: 70px; margin-bottom: 12px; }
+  .signup-story h2 { font-size: 2.55rem; }
+  .signup-story__description { margin-block: 14px; font-size: 1rem; }
+  .signup-steps { font-size: 1rem; }
+  .signup-story h3 { margin-top: 27px; padding-top: 0; }
 
   .dashboard-header { flex-wrap: wrap; gap: 10px; padding-block: 13px; }
   .dashboard-header__user { flex-wrap: wrap; justify-content: flex-end; gap: 8px 12px; font-size: .87rem; }

@@ -1,33 +1,96 @@
-{% extends "accounts/auth_base.html" %}
+{% extends "base.html" %}
+{% load static %}
 
 {% block title %}Create your account | Bisdak Basics{% endblock %}
-{% block auth_heading %}Your next conversation starts here.{% endblock %}
-{% block auth_description %}Join Bisdak Basics and take your first small step toward practical Cebuano.{% endblock %}
-{% block form_title %}Create your account{% endblock %}
-{% block form_intro %}Start learning at your own pace. It’s free to begin.{% endblock %}
+{% block body_class %}signup-page{% endblock %}
 
-{% block auth_form %}
-<form method="post" class="auth-form" novalidate>
-  {% csrf_token %}
-  {% if form.non_field_errors %}
-    <div class="form-errors" role="alert">{{ form.non_field_errors }}</div>
-  {% endif %}
-  <div class="form-grid form-grid--two">
-    {% for field in form %}
-      <div class="form-field{% if field.name == 'password1' or field.name == 'password2' or field.name == 'email' %} form-field--wide{% endif %}">
-        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
-        <div class="input-wrap">
-          {{ field }}
-          {% if field.field.widget.input_type == 'password' %}
-            <button class="password-toggle" type="button" data-password-toggle="{{ field.id_for_label }}" aria-label="Show {{ field.label|lower }}">Show</button>
-          {% endif %}
-        </div>
-        {% if field.help_text %}<div class="field-help">{{ field.help_text }}</div>{% endif %}
-        {% if field.errors %}<div class="field-error" role="alert">{{ field.errors }}</div>{% endif %}
-      </div>
-    {% endfor %}
+{% block content %}
+<header class="site-header">
+  <div class="site-header__main page-width">
+    <a class="brand" href="{% url 'core:home' %}" aria-label="Bisdak Basics home">
+      <img class="brand__logo" src="{% static 'images/bito-flying-fish.png' %}" alt="">
+      <span>Bisdak Basics</span>
+    </a>
+    <p class="header-motto">A little Bisaya. A little closer.</p>
+    <nav class="header-actions" aria-label="Account navigation">
+      <a class="button button--outline" href="{% url 'accounts:login' %}">Log In</a>
+      <a class="button button--primary" href="#create-account">Get Started</a>
+    </nav>
   </div>
-  <button class="button button--primary button--full" type="submit">Create account <span aria-hidden="true">→</span></button>
-  <p class="auth-switch">Already have an account? <a href="{% url 'accounts:login' %}">Log in</a></p>
-</form>
+  <p class="site-header__tagline page-width">Practical language. Real connections.</p>
+</header>
+
+<main class="signup-main page-width" id="main-content">
+  <div class="signup-heading">
+    <h1>Start your Cebuano journey.</h1>
+    <p>Create a free account. Learn a little, every day.</p>
+  </div>
+
+  <div class="signup-grid">
+    <section class="signup-card" id="create-account" aria-labelledby="signup-form-title">
+      <h2 id="signup-form-title">Create your account</h2>
+      <form method="post" class="signup-form" novalidate>
+        {% csrf_token %}
+        {% if form.non_field_errors %}
+          <div class="form-errors" role="alert">{{ form.non_field_errors }}</div>
+        {% endif %}
+
+        <div class="signup-field">
+          <label for="{{ form.username.id_for_label }}">Username <span aria-hidden="true">*</span></label>
+          <div class="signup-input-wrap">{{ form.username }}</div>
+          <p class="signup-help">{{ form.username.help_text }}</p>
+          {% if form.username.errors %}<div class="field-error" role="alert">{{ form.username.errors }}</div>{% endif %}
+        </div>
+
+        <div class="signup-field">
+          <label for="{{ form.full_name.id_for_label }}">Full name <span aria-hidden="true">*</span></label>
+          <div class="signup-input-wrap">{{ form.full_name }}</div>
+          {% if form.full_name.errors %}<div class="field-error" role="alert">{{ form.full_name.errors }}</div>{% endif %}
+        </div>
+
+        <div class="signup-field">
+          <label for="{{ form.email.id_for_label }}">Email address <span aria-hidden="true">*</span></label>
+          <div class="signup-input-wrap">{{ form.email }}</div>
+          {% if form.email.errors %}<div class="field-error" role="alert">{{ form.email.errors }}</div>{% endif %}
+        </div>
+
+        <div class="signup-field">
+          <label for="{{ form.password1.id_for_label }}">Password <span aria-hidden="true">*</span></label>
+          <div class="signup-input-wrap">
+            {{ form.password1 }}
+            <button class="password-toggle" type="button" data-password-toggle="{{ form.password1.id_for_label }}" aria-label="Show password">Show</button>
+          </div>
+          <p class="signup-help">{{ form.password1.help_text }}</p>
+          {% if form.password1.errors %}<div class="field-error" role="alert">{{ form.password1.errors }}</div>{% endif %}
+        </div>
+
+        <div class="signup-field">
+          <label for="{{ form.password2.id_for_label }}">Confirm password <span aria-hidden="true">*</span></label>
+          <div class="signup-input-wrap">
+            {{ form.password2 }}
+            <button class="password-toggle" type="button" data-password-toggle="{{ form.password2.id_for_label }}" aria-label="Show confirm password">Show</button>
+          </div>
+          {% if form.password2.errors %}<div class="field-error" role="alert">{{ form.password2.errors }}</div>{% endif %}
+        </div>
+
+        <p class="signup-terms">By creating an account, you agree to our Terms and Privacy Policy.</p>
+        <button class="button button--primary button--full signup-submit" type="submit">Create account <span aria-hidden="true">→</span></button>
+        <a class="button button--outline button--full signup-login" href="{% url 'accounts:login' %}">Already a learner? Log In</a>
+      </form>
+    </section>
+
+    <aside class="signup-story" aria-labelledby="signup-story-title">
+      <img class="signup-story__bito" src="{% static 'images/bito-flying-fish.png' %}" alt="Bito the flying fish">
+      <h2 id="signup-story-title">Small steps.<br>Real conversations.</h2>
+      <p class="signup-story__description">Build confidence with useful phrases, native-speaker listening and gentle checkpoints.</p>
+      <ol class="signup-steps">
+        <li><span>01</span> Learn something useful</li>
+        <li><span>02</span> Listen and practice</li>
+        <li><span>03</span> See how far you have come</li>
+      </ol>
+      <h3>Your pace is the right pace.</h3>
+      <p class="signup-story__tip">Bito’s tip: ten minutes is a great start.</p>
+    </aside>
+  </div>
+</main>
 {% endblock %}

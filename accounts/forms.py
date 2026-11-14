@@ -1,39 +1,50 @@
 from django import forms
 from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
 from django.core.exceptions import ValidationError
+from django.core.validators import RegexValidator
 from django.db.models import Q
 
 from .models import User
 
 
 class RegistrationForm(UserCreationForm):
-    first_name = forms.CharField(max_length=150, label="First name")
-    last_name = forms.CharField(max_length=150, label="Last name")
+    username = forms.CharField(
+        label="Username",
+        min_length=3,
+        max_length=24,
+        validators=[
+            RegexValidator(
+                regex=r"^[A-Za-z0-9.]+$",
+                message="Use only letters, numbers, and periods.",
+            )
+        ],
+    )
+    full_name = forms.CharField(max_length=150, label="Full name")
     email = forms.EmailField(label="Email address")
 
     class Meta(UserCreationForm.Meta):
         model = User
-        fields = ("username", "first_name", "last_name", "email")
+        fields = ("username", "email")
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         placeholders = {
-            "username": "Choose a username",
-            "first_name": "First name",
-            "last_name": "Last name",
+            "username": "maria.santos",
+            "full_name": "Maria Santos",
             "email": "you@example.com",
-            "password1": "Create a password",
+            "password1": "At least 8 characters",
             "password2": "Enter your password again",
         }
         for name, field in self.fields.items():
             field.widget.attrs["class"] = "form-control"
             field.widget.attrs["placeholder"] = placeholders.get(name, "")
         self.fields["username"].widget.attrs["autocomplete"] = "username"
-        self.fields["first_name"].widget.attrs["autocomplete"] = "given-name"
-        self.fields["last_name"].widget.attrs["autocomplete"] = "family-name"
+        self.fields["full_name"].widget.attrs["autocomplete"] = "name"
         self.fields["email"].widget.attrs["autocomplete"] = "email"
         self.fields["password1"].widget.attrs["autocomplete"] = "new-password"
         self.fields["password2"].widget.attrs["autocomplete"] = "new-password"
+        self.fields["username"].help_text = "3–24 characters. Letters, numbers and periods."
+        self.fields["password1"].help_text = "Use at least 8 characters, including a number."
 
     def clean_username(self):
         username = self.cleaned_data["username"].strip()
@@ -51,9 +62,24 @@ class RegistrationForm(UserCreationForm):
             raise ValidationError("An account with this email already exists.")
         return email
 
+    def clean_full_name(self):
+        full_name = " ".join(self.cleaned_data["full_name"].split())
+        if not full_name:
+            raise ValidationError("Enter your full name.")
+        return full_name
+
+    def clean_password1(self):
+        password = self.cleaned_data.get("password1")
+        if password and not any(character.isdigit() for character in password):
+            raise ValidationError("Include at least one number.")
+        return password
+
     def save(self, commit=True):
         user = super().save(commit=False)
         user.email = self.cleaned_data["email"]
+        name_parts = self.cleaned_data["full_name"].split(maxsplit=1)
+        user.first_name = name_parts[0]
+        user.last_name = name_parts[1] if len(name_parts) > 1 else ""
         user.role = User.Role.LEARNER
         if commit:
             user.save()

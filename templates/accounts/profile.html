@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}My profile | Bisdak Basics{% endblock %}
+{% block body_class %}profile-page{% endblock %}
+{% block content %}
+<div class="profile-shell">
+  <header class="profile-header">
+    <a class="brand" href="{% url 'core:dashboard_redirect' %}">
+      <img class="brand__logo" src="{% static 'images/bito-flying-fish.png' %}" alt="">
+      <span>Bisdak Basics</span>
+    </a>
+    <p class="profile-header__motto">Your everyday Cebuano</p>
+    <a class="button button--outline profile-header__button" href="{% url 'accounts:profile' %}" aria-current="page">My Profile</a>
+  </header>
+
+  <div class="profile-layout">
+    <aside class="profile-sidebar" aria-label="Account navigation">
+      <p class="eyebrow">Learn at your pace</p>
+      <nav class="profile-nav">
+        <a class="profile-nav__link" href="{% url 'core:dashboard_redirect' %}">Dashboard</a>
+        <span class="profile-nav__link profile-nav__link--disabled" aria-disabled="true">Lessons <small>Coming soon</small></span>
+        <span class="profile-nav__link profile-nav__link--disabled" aria-disabled="true">Phrasebook <small>Coming soon</small></span>
+        <span class="profile-nav__link profile-nav__link--disabled" aria-disabled="true">Quizzes <small>Coming soon</small></span>
+        <a class="profile-nav__link profile-nav__link--active" href="{% url 'accounts:profile' %}" aria-current="page">My Profile</a>
+      </nav>
+      <p class="profile-sidebar__quote">One small conversation<br>can open a new door.</p>
+      <a class="profile-nav__link" href="{% url 'core:home' %}">Back to website <span aria-hidden="true">↗</span></a>
+      <form class="profile-logout" method="post" action="{% url 'accounts:logout' %}">
+        {% csrf_token %}<button class="text-button" type="submit">Log out</button>
+      </form>
+    </aside>
+
+    <main class="profile-main" id="main-content">
+      <p class="eyebrow">Your account</p>
+      <h1>My Profile</h1>
+      <p class="profile-intro">Make this learning space your own.</p>
+
+      {% if form.non_field_errors %}
+        <div class="profile-alert profile-alert--error" role="alert">{{ form.non_field_errors }}</div>
+      {% endif %}
+
+      <div class="profile-columns">
+        <section class="profile-card profile-edit-card" aria-labelledby="personal-details-heading">
+          <h2 id="personal-details-heading">Personal details</h2>
+          <form method="post" class="profile-form" novalidate>
+            {% csrf_token %}
+            {% for field in form %}
+              <div class="profile-field{% if field.errors %} profile-field--error{% endif %}">
+                <label for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %} <span aria-hidden="true">*</span>{% endif %}</label>
+                {{ field }}
+                {% if field.errors %}
+                  <div class="field-error" id="{{ field.id_for_label }}-error">{{ field.errors }}</div>
+                {% endif %}
+              </div>
+            {% endfor %}
+            <p class="profile-privacy">Your profile details are private to your account.</p>
+            <button class="button button--primary profile-submit" type="submit">Save changes</button>
+          </form>
+        </section>
+
+        <section class="profile-card profile-summary" aria-labelledby="learning-profile-heading">
+          <h2 id="learning-profile-heading">Learning, your way.</h2>
+          <dl class="profile-summary__details">
+            <div><dt>Username</dt><dd>{{ request.user.username }}</dd></div>
+            <div><dt>Joined</dt><dd>{{ request.user.date_joined|date:"F Y" }}</dd></div>
+            <div><dt>Account role</dt><dd>{{ request.user.get_role_display }}</dd></div>
+            <div><dt>Learning goal</dt><dd>{{ profile.learning_goal|default:"Choose a goal in Personal details." }}</dd></div>
+          </dl>
+          <a class="button button--outline profile-dashboard-button" href="{% url 'core:dashboard_redirect' %}">Back to Dashboard</a>
+        </section>
+      </div>
+
+      <section class="profile-card profile-story" aria-labelledby="learning-story-heading">
+        <h2 id="learning-story-heading">Your learning story</h2>
+        <p class="profile-story__label">Learning progress · Updates as lessons become available</p>
+        <div class="profile-story__empty">
+          <span class="profile-story__star" aria-hidden="true">✦</span>
+          <p>Your practice milestones will appear here as you learn.</p>
+        </div>
+      </section>
+    </main>
+  </div>
+</div>
+{% endblock %}

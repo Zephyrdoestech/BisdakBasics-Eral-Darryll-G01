@@ -7,6 +7,61 @@ from django.db.models import Q
 from .models import User
 
 
+class ProfileForm(forms.Form):
+    full_name = forms.CharField(max_length=150, label="Full name")
+    email = forms.EmailField(label="Email address")
+    contact_number = forms.CharField(max_length=32, required=False, label="Contact number")
+    location = forms.CharField(max_length=150, required=False, label="Location")
+    learning_goal = forms.CharField(max_length=160, required=False, label="Learning goal")
+
+    def __init__(self, *args, user, profile, **kwargs):
+        self.user = user
+        self.profile = profile
+        kwargs.setdefault("initial", {
+            "full_name": user.get_full_name(),
+            "email": user.email,
+            "contact_number": profile.contact_number,
+            "location": profile.location,
+            "learning_goal": profile.learning_goal,
+        })
+        super().__init__(*args, **kwargs)
+        for name, field in self.fields.items():
+            field.widget.attrs["class"] = "form-control profile-control"
+            field.widget.attrs["autocomplete"] = {
+                "full_name": "name",
+                "email": "email",
+                "contact_number": "tel",
+                "location": "address-level2",
+            }.get(name, "off")
+
+    def clean_full_name(self):
+        name = " ".join(self.cleaned_data["full_name"].split())
+        if not name:
+            raise ValidationError("Enter your full name.")
+        return name
+
+    def clean_email(self):
+        email = self.cleaned_data["email"].strip().lower()
+        if User.objects.exclude(pk=self.user.pk).filter(
+            Q(email__iexact=email) | Q(username__iexact=email)
+        ).exists():
+            raise ValidationError("This email address is already in use.")
+        return email
+
+    def save(self):
+        first_name, *remaining_names = self.cleaned_data["full_name"].split(maxsplit=1)
+        self.user.first_name = first_name
+        self.user.last_name = remaining_names[0] if remaining_names else ""
+        self.user.email = self.cleaned_data["email"]
+        self.user.save(update_fields=("first_name", "last_name", "email"))
+
+        self.profile.contact_number = self.cleaned_data["contact_number"].strip()
+        self.profile.location = self.cleaned_data["location"].strip()
+        self.profile.learning_goal = self.cleaned_data["learning_goal"].strip()
+        self.profile.save(update_fields=("contact_number", "location", "learning_goal", "updated_at"))
+        return self.user
+
+
 class RegistrationForm(UserCreationForm):
     username = forms.CharField(
         label="Username",

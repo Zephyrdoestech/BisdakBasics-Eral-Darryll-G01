@@ -13,6 +13,7 @@
     <div class="dashboard-header__user">
       <span class="role-pill">Learner</span>
       <span class="user-name">{{ request.user.get_full_name|default:request.user.username }}</span>
+      <a class="text-button" href="{% url 'accounts:profile' %}">My profile</a>
       <form method="post" action="{% url 'accounts:logout' %}">{% csrf_token %}<button class="text-button" type="submit">Log out</button></form>
     </div>
   </header>

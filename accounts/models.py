@@ -55,6 +55,8 @@ class Profile(models.Model):
         related_name="profile",
     )
     contact_number = models.CharField(max_length=32, blank=True)
+    location = models.CharField(max_length=150, blank=True)
+    learning_goal = models.CharField(max_length=160, blank=True)
     bio = models.CharField(max_length=500, blank=True)
     updated_at = models.DateTimeField(auto_now=True)
 

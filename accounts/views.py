@@ -1,6 +1,6 @@
 from django.contrib import messages
 from django.conf import settings
-from django.contrib.auth import login, logout
+from django.contrib.auth import logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.views import LoginView
 from django.db import IntegrityError, transaction
@@ -24,13 +24,12 @@ def register(request):
     if request.method == "POST" and form.is_valid():
         try:
             with transaction.atomic():
-                user = form.save()
+                form.save()
         except IntegrityError:
             form.add_error(None, "That username or email is already registered. Please try another.")
             return render(request, "accounts/register.html", {"form": form})
-        login(request, user, backend="accounts.backends.UsernameOrEmailBackend")
-        messages.success(request, "Your account is ready. Your first conversation is waiting.")
-        return redirect("core:dashboard_redirect")
+        messages.success(request, "Your account was created. Please log in to continue.")
+        return redirect("accounts:login")
 
     return render(request, "accounts/register.html", {"form": form})
 

@@ -29,7 +29,7 @@ def register(request):
             form.add_error(None, "That username or email is already registered. Please try another.")
             return render(request, "accounts/register.html", {"form": form})
         login(request, user, backend="accounts.backends.UsernameOrEmailBackend")
-        messages.success(request, "Your account is ready. Welcome to Bisdak Basics!")
+        messages.success(request, "Your account is ready. Your first conversation is waiting.")
         return redirect("core:dashboard_redirect")
 
     return render(request, "accounts/register.html", {"form": form})

@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}Learner dashboard | Bisdak Basics{% endblock %}
+{% block title %}Your learning dashboard | Bisdak Basics{% endblock %}
 {% block body_class %}dashboard-page{% endblock %}
 {% block content %}
 <div class="dashboard-shell">
@@ -17,37 +17,68 @@
       <form method="post" action="{% url 'accounts:logout' %}">{% csrf_token %}<button class="text-button" type="submit">Log out</button></form>
     </div>
   </header>
-  <main class="dashboard-main page-width" id="main-content">
-    <section class="dashboard-welcome">
-      <div>
-        <p class="eyebrow">Your learning space</p>
-        <h1>Maayong pag-abot, {{ request.user.first_name|default:request.user.username }}!</h1>
-        <p>Every new phrase is a step toward a real conversation. Ready when you are.</p>
-      </div>
-      <img src="{% static 'images/bito-flying-fish.png' %}" alt="Bito cheering you on" class="dashboard-welcome__bito">
-    </section>
 
-    <section class="dashboard-stats" aria-label="Your progress">
-      <article class="dashboard-stat"><span class="dashboard-stat__icon dashboard-stat__icon--mint">✓</span><div><strong>0</strong><span>Lessons completed</span></div></article>
-      <article class="dashboard-stat"><span class="dashboard-stat__icon dashboard-stat__icon--peach">↗</span><div><strong>0 days</strong><span>Current streak</span></div></article>
-      <article class="dashboard-stat"><span class="dashboard-stat__icon dashboard-stat__icon--yellow">★</span><div><strong>0 XP</strong><span>Points earned</span></div></article>
-    </section>
+  <div class="learner-layout">
+    <aside class="learner-sidebar" aria-label="Learner navigation">
+      <p class="eyebrow">Your learning space</p>
+      <nav class="learner-nav">
+        <a class="learner-nav__link learner-nav__link--active" href="{% url 'core:learner_dashboard' %}" aria-current="page"><span aria-hidden="true">⌂</span> Dashboard</a>
+        <a class="learner-nav__link" href="{% url 'core:home' %}#topics"><span aria-hidden="true">◉</span> Lessons</a>
+        <span class="learner-nav__link learner-nav__link--disabled"><span aria-hidden="true">▤</span> Phrasebook <small>Coming soon</small></span>
+        <span class="learner-nav__link learner-nav__link--disabled"><span aria-hidden="true">✓</span> Quizzes <small>Coming soon</small></span>
+        <a class="learner-nav__link" href="{% url 'accounts:profile' %}"><span aria-hidden="true">◎</span> My Profile</a>
+        <a class="learner-nav__link learner-nav__link--external" href="{% url 'core:home' %}">Back to website <span aria-hidden="true">↗</span></a>
+      </nav>
+    </aside>
 
-    <section class="dashboard-panel learning-empty" aria-labelledby="path-title">
-      <div class="learning-empty__copy">
-        <p class="eyebrow">Your path starts here</p>
-        <h2 id="path-title">Your first lesson is on its way.</h2>
-        <p>We’re getting the learning path ready. In the meantime, explore the everyday topics Bisdak Basics is built around.</p>
-        <a class="button button--primary" href="{% url 'core:home' %}#topics">Explore learning topics <span aria-hidden="true">→</span></a>
-      </div>
-      <div class="empty-path" aria-hidden="true"><span>1</span><i></i><span>2</span><i></i><span>3</span></div>
-    </section>
+    <main class="learner-main" id="main-content">
+      <section class="learner-greeting" aria-labelledby="learner-greeting-title">
+        <div>
+          <p class="eyebrow">Your Cebuano journey</p>
+          <h1 id="learner-greeting-title">Maayong buntag, {{ request.user.first_name|default:request.user.username }}!</h1>
+          <p>Welcome aboard. Your goal: 10 minutes of Cebuano a day.</p>
+        </div>
+        <img src="{% static 'images/bito-flying-fish.png' %}" alt="Bito cheering you on" class="learner-greeting__bito">
+      </section>
 
-    <nav class="dashboard-shortcuts" aria-label="Learner shortcuts">
-      <a href="{% url 'core:home' %}#topics">Lesson topics <span aria-hidden="true">→</span></a>
-      <span>Phrasebook <small>Coming soon</small></span>
-      <span>Quizzes <small>Coming soon</small></span>
-    </nav>
-  </main>
+      <section class="learner-metrics" aria-label="Your progress">
+        <article class="learner-metric learner-metric--mint"><span class="learner-metric__icon" aria-hidden="true">✓</span><div><strong>0</strong><span>Lessons completed</span></div></article>
+        <article class="learner-metric learner-metric--peach"><span class="learner-metric__icon" aria-hidden="true">↗</span><div><strong>0-day streak</strong><span>Keep your practice going</span></div></article>
+        <article class="learner-metric learner-metric--yellow"><span class="learner-metric__icon" aria-hidden="true">★</span><div><strong>0 XP</strong><span>Experience points</span></div></article>
+      </section>
+
+      <section class="learner-content-grid" aria-label="Your next steps">
+        <div class="learner-path-card">
+          <p class="eyebrow">Your first little adventure</p>
+          <h2>Let’s start a conversation.</h2>
+          <p class="learner-path-intro">Start with a greeting, then build your confidence one useful phrase at a time.</p>
+          <a class="learner-step learner-step--current" href="{% url 'core:home' %}#topics">
+            <span class="learner-step__number">→</span>
+            <span class="learner-step__copy"><strong>Say hello</strong><small>Start with a useful greeting</small></span>
+            <span class="learner-step__action">Explore <span aria-hidden="true">→</span></span>
+          </a>
+          <div class="learner-step learner-step--locked" aria-label="Ordering food, coming soon">
+            <span class="learner-step__number">01</span>
+            <span class="learner-step__copy"><strong>Ordering Food</strong><small>Coming up after your first lesson</small></span>
+            <span class="learner-step__lock" aria-hidden="true">⌑</span>
+          </div>
+          <div class="learner-step learner-step--locked" aria-label="Asking for directions, coming soon">
+            <span class="learner-step__number">02</span>
+            <span class="learner-step__copy"><strong>Asking for Directions</strong><small>Coming up in your learning path</small></span>
+            <span class="learner-step__lock" aria-hidden="true">⌑</span>
+          </div>
+        </div>
+
+        <aside class="learner-encouragement">
+          <div class="learner-encouragement__icon" aria-hidden="true">✦</div>
+          <p class="eyebrow">A little practice goes a long way</p>
+          <h2>Your pace is the right pace.</h2>
+          <p>Small, steady practice can make everyday conversations feel more familiar.</p>
+          <div class="learner-tip"><span aria-hidden="true">🐟</span><p><strong>Bito’s tip</strong>Try one phrase today. Ten minutes is a great start.</p></div>
+          <a href="{% url 'core:home' %}#topics" class="learner-text-link">Explore everyday phrases <span aria-hidden="true">→</span></a>
+        </aside>
+      </section>
+    </main>
+  </div>
 </div>
 {% endblock %}

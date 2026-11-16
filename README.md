@@ -41,6 +41,25 @@ SQLite is not configured. The project requires a PostgreSQL `DATABASE_URL`.
 
 The site will be available at <http://127.0.0.1:8000/>.
 
+## Deploy on Render
+
+Connect this GitHub repository to a Render Python web service and set:
+
+- Build command: `bash build.sh`
+- Start command: `python -m gunicorn config.wsgi:application --log-file -`
+
+Configure these environment variables in the Render service settings. Do not commit production values:
+
+- `SECRET_KEY`: generate a new secret in Render.
+- `DEBUG`: `False`
+- `DATABASE_URL`: your PostgreSQL URL. For Supabase, use its shared pooler URL; session mode on port 5432 works with this project's persistent database connections.
+- `DB_CONN_MAX_AGE`: `60` (optional; this is already the default).
+- `ALLOWED_HOSTS`: only needed for custom domains; the Render hostname is added automatically.
+
+The build script collects static files and applies pending migrations during deployment. After the first successful deploy, run `python manage.py createsuperuser` in the Render Shell to create an administrator account.
+
+For Supabase, copy a shared pooler URL from the project's **Connect** panel. Render's guide explains the connection modes and notes that direct Supabase connections can have IPv6 reachability issues: <https://render.com/articles/how-to-connect-a-render-service-to-supabase-postgres>.
+
 ## Repository naming
 
 The requested repository naming pattern is `SystemName-Lastname-Firstname-Section`. The local folder is currently named `BisdakBasics`; rename the GitHub repository to the required pattern when the section value is known. Keep `.env`, virtual environments, and Python cache files out of commits.

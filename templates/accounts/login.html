@@ -1,29 +1,83 @@
-{% extends "accounts/auth_base.html" %}
+{% extends "base.html" %}
+{% load static %}
 
-{% block title %}Log in | Bisdak Basics{% endblock %}
-{% block auth_heading %}Ready for another little win?{% endblock %}
-{% block auth_description %}Pick up where you left off and keep building your everyday Cebuano.{% endblock %}
-{% block form_title %}Welcome back{% endblock %}
-{% block form_intro %}Log in to continue your learning journey.{% endblock %}
+{% block title %}{% if is_admin_login %}Administrator sign-in{% else %}Log in{% endif %} | Bisdak Basics{% endblock %}
+{% block body_class %}login-page{% endblock %}
+{% block content %}
+<header class="login-header">
+  <div class="login-header__row">
+    <a class="brand" href="{% url 'core:home' %}" aria-label="Bisdak Basics home">
+      <img class="brand__logo" src="{% static 'images/bito-flying-fish.png' %}" alt="">
+      <span>Bisdak Basics</span>
+    </a>
+    <p class="login-header__motto">A little Bisaya. A little closer.</p>
+    <nav class="login-header__actions" aria-label="Account navigation">
+      <a class="button button--outline" href="{% url 'accounts:login' %}"{% if not is_admin_login %} aria-current="page"{% endif %}>Log In</a>
+      <a class="button button--primary" href="{% url 'accounts:register' %}">Get Started</a>
+    </nav>
+  </div>
+  <p class="login-header__tagline">Practical language. Real connections.</p>
+</header>
 
-{% block auth_form %}
-<form method="post" class="auth-form" novalidate>
-  {% csrf_token %}
-  {% if form.non_field_errors %}<div class="form-errors" role="alert">{{ form.non_field_errors }}</div>{% endif %}
-  {% for field in form %}
-    <div class="form-field">
-      <label for="{{ field.id_for_label }}">{{ field.label }}</label>
-      <div class="input-wrap">
-        {{ field }}
-        {% if field.name == 'password' %}
-          <button class="password-toggle" type="button" data-password-toggle="{{ field.id_for_label }}" aria-label="Show password">Show</button>
+<main class="login-main" id="main-content">
+  <div class="login-heading">
+    <h1>Maayong pagbalik.</h1>
+    <p>Welcome back. Pick up where you left off.</p>
+  </div>
+
+  <div class="login-layout">
+    <section class="login-card" aria-labelledby="login-title">
+      <h2 id="login-title">{% if is_admin_login %}Administrator sign-in{% else %}Log in to Bisdak Basics{% endif %}</h2>
+      <form method="post" class="login-form" novalidate>
+        {% csrf_token %}
+        {% if form.non_field_errors %}
+          <div class="login-form__errors" role="alert">{{ form.non_field_errors }}</div>
         {% endif %}
-      </div>
-      {% if field.errors %}<div class="field-error" role="alert">{{ field.errors }}</div>{% endif %}
-    </div>
-  {% endfor %}
-  {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
-  <button class="button button--primary button--full" type="submit">Log In <span aria-hidden="true">→</span></button>
-  <p class="auth-switch">New to Bisdak Basics? <a href="{% url 'accounts:register' %}">Create an account</a></p>
-</form>
+
+        <div class="login-field{% if form.username.errors %} login-field--error{% endif %}">
+          <label for="{{ form.username.id_for_label }}">{{ form.username.label }} <span aria-hidden="true">*</span></label>
+          {{ form.username }}
+          {% if form.username.errors %}<div class="field-error" role="alert">{{ form.username.errors }}</div>{% endif %}
+        </div>
+
+        <div class="login-field{% if form.password.errors %} login-field--error{% endif %}">
+          <label for="{{ form.password.id_for_label }}">{{ form.password.label }} <span aria-hidden="true">*</span></label>
+          <div class="login-password-wrap">
+            {{ form.password }}
+            <button class="password-toggle" type="button" data-password-toggle="{{ form.password.id_for_label }}" aria-label="Show password">Show</button>
+          </div>
+          {% if form.password.errors %}<div class="field-error" role="alert">{{ form.password.errors }}</div>{% endif %}
+        </div>
+
+        <label class="login-remember" for="{{ form.remember_me.id_for_label }}">
+          {{ form.remember_me }}
+          <span>{{ form.remember_me.label }}</span>
+        </label>
+        {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
+
+        <button class="button button--primary login-submit" type="submit">Log In <span aria-hidden="true">&rarr;</span></button>
+        <a class="button button--outline login-create-account" href="{% url 'accounts:register' %}">New here? Create an account</a>
+        <p class="login-shared-device">Use a shared computer? Log out when you finish.</p>
+        {% if is_admin_login %}
+          <a class="button button--outline login-admin-link" href="{% url 'accounts:login' %}">Learner sign-in &rarr;</a>
+        {% else %}
+          <a class="button button--outline login-admin-link" href="{% url 'accounts:admin_login' %}">Administrator sign-in &rarr;</a>
+        {% endif %}
+      </form>
+    </section>
+
+    <aside class="login-story" aria-labelledby="login-story-title">
+      <img class="login-story__bito" src="{% static 'images/bito-flying-fish.png' %}" alt="Bito, your friendly Cebuano learning guide">
+      <h2 id="login-story-title">Small steps.<br>Real conversations.</h2>
+      <p class="login-story__description">Build confidence with useful phrases, native-speaker listening and gentle checkpoints.</p>
+      <ol class="login-story__steps">
+        <li><span>01</span> Learn something useful</li>
+        <li><span>02</span> Listen and practice</li>
+        <li><span>03</span> See how far you have come</li>
+      </ol>
+      <h3>Your pace is the right pace.</h3>
+      <p class="login-story__tip">Bito's tip: ten minutes is a great start.</p>
+    </aside>
+  </div>
+</main>
 {% endblock %}

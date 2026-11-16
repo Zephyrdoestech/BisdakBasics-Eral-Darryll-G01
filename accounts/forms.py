@@ -169,3 +169,20 @@ class UsernameOrEmailAuthenticationForm(AuthenticationForm):
             }
         ),
     )
+    remember_me = forms.BooleanField(
+        required=False,
+        label="Keep me signed in on this browser",
+        widget=forms.CheckboxInput(attrs={"class": "login-remember__input"}),
+    )
+
+
+class AdministratorAuthenticationForm(UsernameOrEmailAuthenticationForm):
+    """Allow only administrator-role accounts through the admin sign-in link."""
+
+    def confirm_login_allowed(self, user):
+        super().confirm_login_allowed(user)
+        if user.role != User.Role.ADMIN:
+            raise ValidationError(
+                "This sign-in is for administrator accounts.",
+                code="invalid_login",
+            )

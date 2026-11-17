@@ -1,65 +1,105 @@
 # Bisdak Basics
 
-Bisdak Basics is a Django web application for learning practical Cebuano/Bisaya. It will support learner and administrator accounts, situational lessons, a searchable phrasebook, assessments, and progress monitoring.
+**Learn practical Cebuano. Build real connections.** Bisdak Basics is a Django web app for learning everyday Cebuano (Bisaya), with a friendly, lesson-focused experience guided by Bito the flying fish.
 
-## Current checkpoint
+## Live website
 
-The current checkpoint includes a responsive public homepage, learner registration and login/logout, role-protected starter dashboards, and a responsive profile page. Users can update their name, email, contact number, location, and learning goal. Dashboard progress and learning content are shown as honest empty states until those features are added. Lessons, phrasebook, and quizzes remain future checkpoints.
+Visit **[bisdak-basics.onrender.com](https://bisdak-basics.onrender.com/)**.
 
-## Requirements
+## What is implemented
 
-- Python 3.10 or newer
-- PostgreSQL 14 or newer
+This project is being built incrementally. The current account-focused checkpoint includes:
 
-SQLite is not configured. The project requires a PostgreSQL `DATABASE_URL`.
+- Public, responsive landing page.
+- Learner registration, login, and logout using Django authentication and hashed passwords.
+- Role-based learner and administrator dashboards. Dashboard views require login and reject users with the wrong role.
+- A private profile page where a signed-in user can view and update their own name, email, contact number, location, learning goal, and bio.
+- PostgreSQL-only database configuration and WhiteNoise static file serving for deployment.
 
-## Local setup
+Lessons, quizzes, phrasebook content, and learner progress tracking are future increments.
 
-1. Create and activate a virtual environment:
+## Technology
 
-   ```powershell
-   py -m venv .venv
-   .\.venv\Scripts\Activate.ps1
-   ```
+- Python 3.10+
+- Django 5.2
+- PostgreSQL (including Supabase PostgreSQL)
+- Django templates, HTML, and CSS
+- Gunicorn and WhiteNoise on Render
 
-2. Install dependencies:
+SQLite is not supported by the project settings. The app requires a PostgreSQL `DATABASE_URL`.
 
-   ```powershell
-   python -m pip install -r requirements.txt
-   ```
+## Run locally
 
-3. Create a PostgreSQL database named `bisdak_basics` (or choose another name).
+You need Python and a running PostgreSQL database.
 
-4. Copy `.env.example` to `.env` and set `SECRET_KEY` and `DATABASE_URL` to your local values.
+### Windows PowerShell
 
-5. Apply Django's initial migrations and start the development server:
+```powershell
+py -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install -r requirements.txt
+Copy-Item .env.example .env
+```
 
-   ```powershell
-   python manage.py migrate
-   python manage.py runserver
-   ```
+Edit `.env` and set a private `SECRET_KEY` and your PostgreSQL `DATABASE_URL`. For example:
 
-The site will be available at <http://127.0.0.1:8000/>.
+```dotenv
+SECRET_KEY=your-long-random-secret
+DEBUG=True
+ALLOWED_HOSTS=127.0.0.1,localhost
+DATABASE_URL=postgresql://postgres:your-password@localhost:5432/bisdak_basics
+```
+
+Create the `bisdak_basics` database first, then run:
+
+```powershell
+python manage.py migrate
+python manage.py runserver
+```
+
+Open <http://127.0.0.1:8000/>. Do not commit `.env`; it is ignored by Git. Use a different secret and database credentials for production.
+
+### Useful commands
+
+```powershell
+python manage.py check
+python manage.py test
+python manage.py createsuperuser
+```
+
+The superuser receives the administrator role. To review all registered routes, see the `accounts` and `core` URL configurations.
 
 ## Deploy on Render
 
-Connect this GitHub repository to a Render Python web service and set:
+The app is deployed at [https://bisdak-basics.onrender.com/](https://bisdak-basics.onrender.com/). To connect or redeploy it from this Git repository, configure a Render **Web Service** with:
 
-- Build command: `bash build.sh`
-- Start command: `python -m gunicorn config.wsgi:application --log-file -`
+| Setting | Value |
+| --- | --- |
+| Runtime | Python |
+| Build command | `bash build.sh` |
+| Start command | `python -m gunicorn config.wsgi:application --bind 0.0.0.0:$PORT --log-file -` |
 
-Configure these environment variables in the Render service settings. Do not commit production values:
+Set these environment variables in the Render dashboard:
 
-- `SECRET_KEY`: generate a new secret in Render.
-- `DEBUG`: `False`
-- `DATABASE_URL`: your PostgreSQL URL. For Supabase, use its shared pooler URL; session mode on port 5432 works with this project's persistent database connections.
-- `DB_CONN_MAX_AGE`: `60` (optional; this is already the default).
-- `ALLOWED_HOSTS`: only needed for custom domains; the Render hostname is added automatically.
+| Variable | Value |
+| --- | --- |
+| `SECRET_KEY` | Generate a new secret in Render. |
+| `DEBUG` | `False` |
+| `DATABASE_URL` | A PostgreSQL connection string from your database provider. |
+| `DB_CONN_MAX_AGE` | Optional; defaults to `60`. |
 
-The build script collects static files and applies pending migrations during deployment. After the first successful deploy, run `python manage.py createsuperuser` in the Render Shell to create an administrator account.
+Render supplies `RENDER_EXTERNAL_HOSTNAME`; the Django settings add it to `ALLOWED_HOSTS` automatically. If using a custom domain, set `ALLOWED_HOSTS` to include that host. Never paste credentials into Git or this README.
 
-For Supabase, copy a shared pooler URL from the project's **Connect** panel. Render's guide explains the connection modes and notes that direct Supabase connections can have IPv6 reachability issues: <https://render.com/articles/how-to-connect-a-render-service-to-supabase-postgres>.
+`build.sh` installs requirements, collects static files, and applies database migrations. If the database is Supabase, use a connection URL from the Supabase project's **Connect** panel. A session-mode pooler URL is often appropriate for an app host; follow the connection details shown for your Supabase project.
 
-## Repository naming
+After the first successful deployment, create the administrator account from the Render Shell:
 
-The requested repository naming pattern is `SystemName-Lastname-Firstname-Section`. The local folder is currently named `BisdakBasics`; rename the GitHub repository to the required pattern when the section value is known. Keep `.env`, virtual environments, and Python cache files out of commits.
+```bash
+python manage.py createsuperuser
+```
+
+The learner and administrator dashboards are available after login at `/dashboard/learner/` and `/dashboard/admin/`; `/dashboard/` routes each user to the dashboard for their role.
+
+## Repository safety
+
+Keep `.env`, virtual environments (`.venv/` or `venv/`), Python bytecode, and `__pycache__/` out of commits. Install dependencies from `requirements.txt`.

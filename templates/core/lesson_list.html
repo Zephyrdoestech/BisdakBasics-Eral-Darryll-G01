@@ -13,7 +13,7 @@
   <nav class="lessons-mobile-nav" aria-label="Learner navigation">
     <a href="{% url 'core:learner_dashboard' %}">Dashboard</a>
     <a href="{% url 'core:lesson_list' %}" aria-current="page">Lessons</a>
-    <span aria-disabled="true">Phrasebook</span>
+    <a href="{% url 'core:phrasebook' %}">Phrasebook</a>
     <span aria-disabled="true">Quizzes</span>
     <a href="{% url 'accounts:profile' %}">My Profile</a>
   </nav>
@@ -25,7 +25,7 @@
     <nav class="lessons-sidebar__nav">
       <a href="{% url 'core:learner_dashboard' %}">Dashboard</a>
       <a class="is-active" href="{% url 'core:lesson_list' %}" aria-current="page">Lessons</a>
-      <span aria-disabled="true">Phrasebook</span>
+      <a href="{% url 'core:phrasebook' %}">Phrasebook</a>
       <span aria-disabled="true">Quizzes</span>
       <a href="{% url 'accounts:profile' %}">My Profile</a>
     </nav>

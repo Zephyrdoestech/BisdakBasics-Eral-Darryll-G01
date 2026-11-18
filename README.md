@@ -16,9 +16,10 @@ This project is being built incrementally. The current checkpoint includes:
 - A private profile page where a signed-in user can view and update their own name, email, contact number, location, learning goal, and bio.
 - Administrator lesson and category management, including phrase translations, checkpoint questions, drafts, and native-speaker audio uploads.
 - A learner lesson library with phrase-by-phrase audio, local pronunciation recording and replay, saved phrase practice, checkpoint attempts, and lesson completion tied to the learner account.
+- A searchable and category-filtered phrasebook with native-speaker audio, learner phrase requests, and administrator phrase/category CRUD and request review.
 - PostgreSQL-only database configuration and WhiteNoise static file serving for deployment.
 
-The searchable phrasebook, full quiz and grammar assessment modules, streaks, achievements, learner feedback, summary reports, and completion certificates are future increments.
+Full quiz and grammar assessment modules, streaks, achievements, lesson feedback and ratings, summary reports, and completion certificates remain future increments.
 
 ## Technology
 
@@ -43,7 +44,7 @@ python -m pip install -r requirements.txt
 Copy-Item .env.example .env
 ```
 
-Edit `.env` and set a private `SECRET_KEY` and your PostgreSQL `DATABASE_URL`. Lesson audio uploads work locally through Django's media folder. For production uploads, create a **public** `lesson-audio` bucket in Supabase Storage with a 15 MB file-size limit and audio MIME types enabled, then set its project URL and server-side service role key in `.env`. Never expose the service role key in client code or commit it. For example:
+Edit `.env` and set a private `SECRET_KEY` and your PostgreSQL `DATABASE_URL`. Lesson audio uploads work locally through Django's media folder. For production uploads, create the configured public Supabase Storage bucket (default `lesson-audio`) with a 15 MB file-size limit and audio MIME types enabled; lesson and phrasebook files use separate folders inside that bucket, then set its project URL and server-side service role key in `.env`. Never expose the service role key in client code or commit it. For example:
 
 ```dotenv
 SECRET_KEY=your-long-random-secret
@@ -108,7 +109,7 @@ python manage.py createsuperuser
 
 The learner and administrator dashboards are available after login at `/dashboard/learner/` and `/dashboard/admin/`; `/dashboard/` routes each user to the dashboard for their role.
 
-Learners can open published lessons at `/lessons/`. Administrators can manage lessons at `/dashboard/admin/lessons/`; lesson categories can be managed in Django admin. Local audio files are stored under `media/` while `DEBUG=True`.
+Learners can open published lessons at `/lessons/`. Administrators can manage lessons at `/dashboard/admin/lessons/` and phrases at `/dashboard/admin/phrases/`; phrase categories and learner phrase requests are available from the administrator dashboard. Learners can search the phrasebook at `/phrasebook/` and submit requests for review. Local audio files are stored under `media/` while `DEBUG=True`.
 
 ## Repository safety
 

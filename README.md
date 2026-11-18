@@ -14,11 +14,11 @@ This project is being built incrementally. The current checkpoint includes:
 - Learner registration, login, and logout using Django authentication and hashed passwords.
 - Role-based learner and administrator dashboards. Dashboard views require login and reject users with the wrong role.
 - A private profile page where a signed-in user can view and update their own name, email, contact number, location, learning goal, and bio.
-- Administrator lesson and category management, including drafts, English translations, Cebuano content, and optional native-speaker audio uploads.
-- A learner lesson library with published lesson detail pages and audio playback.
+- Administrator lesson and category management, including phrase translations, checkpoint questions, drafts, and native-speaker audio uploads.
+- A learner lesson library with phrase-by-phrase audio, local pronunciation recording and replay, saved phrase practice, checkpoint attempts, and lesson completion tied to the learner account.
 - PostgreSQL-only database configuration and WhiteNoise static file serving for deployment.
 
-Phrasebook content, quizzes, grammar assessments, lesson completion tracking, pronunciation recording, feedback, reports, and certificates are future increments.
+The searchable phrasebook, full quiz and grammar assessment modules, streaks, achievements, learner feedback, summary reports, and completion certificates are future increments.
 
 ## Technology
 

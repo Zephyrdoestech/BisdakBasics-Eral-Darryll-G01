@@ -50,7 +50,10 @@
     {% else %}
       <p class="lessons-eyebrow">Your everyday adventures</p>
       <h1>Small lessons. Big little wins.</h1>
-      <p class="lessons-intro">Explore {{ categories|length }} everyday situation{{ categories|length|pluralize }} and build your Cebuano one conversation at a time.</p>
+      {% if published_lesson_count %}
+        <p class="lessons-intro">{{ completed_lesson_count }} of {{ published_lesson_count }} lessons completed · Keep your conversation trail growing.</p>
+        <div class="lessons-library-progress" role="progressbar" aria-label="Overall lesson completion" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ lesson_progress_percent }}"><span style="width: {{ lesson_progress_percent }}%"></span></div>
+      {% else %}<p class="lessons-intro">Explore {{ categories|length }} everyday situation{{ categories|length|pluralize }} and build your Cebuano one conversation at a time.</p>{% endif %}
 
       {% if categories %}
         <div class="lessons-topic-grid">

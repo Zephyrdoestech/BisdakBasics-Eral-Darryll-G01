@@ -1,6 +1,11 @@
 from django.contrib import admin
 
-from .models import Lesson, LessonCategory
+from .models import Lesson, LessonCategory, LessonPhrase
+
+
+class LessonPhraseInline(admin.TabularInline):
+    model = LessonPhrase
+    extra = 1
 
 
 @admin.register(LessonCategory)
@@ -12,6 +17,7 @@ class LessonCategoryAdmin(admin.ModelAdmin):
 
 @admin.register(Lesson)
 class LessonAdmin(admin.ModelAdmin):
+    inlines = [LessonPhraseInline]
     list_display = ("title", "category", "is_published", "created_by", "updated_at")
     list_filter = ("category", "is_published")
     search_fields = ("title", "situation", "summary")

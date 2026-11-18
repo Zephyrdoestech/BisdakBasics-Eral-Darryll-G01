@@ -23,7 +23,7 @@
       <p class="eyebrow">Your learning space</p>
       <nav class="learner-nav">
         <a class="learner-nav__link learner-nav__link--active" href="{% url 'core:learner_dashboard' %}" aria-current="page"><span aria-hidden="true">⌂</span> Dashboard</a>
-        <a class="learner-nav__link" href="{% url 'core:home' %}#topics"><span aria-hidden="true">◉</span> Lessons</a>
+        <a class="learner-nav__link" href="{% url 'core:lesson_list' %}"><span aria-hidden="true">◉</span> Lessons</a>
         <span class="learner-nav__link learner-nav__link--disabled"><span aria-hidden="true">▤</span> Phrasebook <small>Coming soon</small></span>
         <span class="learner-nav__link learner-nav__link--disabled"><span aria-hidden="true">✓</span> Quizzes <small>Coming soon</small></span>
         <a class="learner-nav__link" href="{% url 'accounts:profile' %}"><span aria-hidden="true">◎</span> My Profile</a>
@@ -52,7 +52,7 @@
           <p class="eyebrow">Your first little adventure</p>
           <h2>Let’s start a conversation.</h2>
           <p class="learner-path-intro">Start with a greeting, then build your confidence one useful phrase at a time.</p>
-          <a class="learner-step learner-step--current" href="{% url 'core:home' %}#topics">
+          <a class="learner-step learner-step--current" href="{% url 'core:lesson_list' %}">
             <span class="learner-step__number">→</span>
             <span class="learner-step__copy"><strong>Say hello</strong><small>Start with a useful greeting</small></span>
             <span class="learner-step__action">Explore <span aria-hidden="true">→</span></span>
@@ -75,7 +75,7 @@
           <h2>Your pace is the right pace.</h2>
           <p>Small, steady practice can make everyday conversations feel more familiar.</p>
           <div class="learner-tip"><span aria-hidden="true">🐟</span><p><strong>Bito’s tip</strong>Try one phrase today. Ten minutes is a great start.</p></div>
-          <a href="{% url 'core:home' %}#topics" class="learner-text-link">Explore everyday phrases <span aria-hidden="true">→</span></a>
+          <a href="{% url 'core:lesson_list' %}" class="learner-text-link">Explore situational lessons <span aria-hidden="true">→</span></a>
         </aside>
       </section>
     </main>

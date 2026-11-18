@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}Lessons | Bisdak Basics{% endblock %}
+{% block content %}
+<main class="lesson-page" id="main-content">
+  <a href="{% url 'core:learner_dashboard' %}" class="lesson-back">← Learner dashboard</a>
+  <header class="lesson-heading"><p class="eyebrow">Learn in real situations</p><h1>Situational lessons</h1><p>Explore practical Cebuano, with English translations and native-speaker audio.</p></header>
+  <div class="lesson-grid">
+    {% for lesson in lessons %}
+      <article class="lesson-card"><p class="lesson-card__category">{{ lesson.category.name }}</p><h2><a href="{% url 'core:lesson_detail' lesson.slug %}">{{ lesson.title }}</a></h2><p class="lesson-card__situation">{{ lesson.situation }}</p><p>{{ lesson.summary }}</p><a class="button button--primary" href="{% url 'core:lesson_detail' lesson.slug %}">Open lesson</a></article>
+    {% empty %}<p class="lesson-empty">No lessons are published yet. Check back soon.</p>{% endfor %}
+  </div>
+</main>
+{% endblock %}

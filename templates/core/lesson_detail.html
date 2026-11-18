@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}{{ lesson.title }} | Bisdak Basics{% endblock %}
+{% block content %}
+<main class="lesson-page lesson-page--detail" id="main-content">
+  <a href="{% url 'core:lesson_list' %}" class="lesson-back">← All lessons</a>
+  <article class="lesson-detail"><p class="lesson-card__category">{{ lesson.category.name }} · {{ lesson.situation }}</p><h1>{{ lesson.title }}</h1><p class="lesson-summary">{{ lesson.summary }}</p>
+    {% if lesson.audio %}<section class="lesson-audio"><h2>Listen to a native speaker</h2><audio controls preload="none" src="{{ lesson.audio.url }}">Your browser does not support audio playback.</audio></section>{% endif %}
+    <div class="lesson-translation-grid"><section><h2>Cebuano</h2><div class="lesson-copy">{{ lesson.cebuano_text|linebreaks }}</div></section><section><h2>English</h2><div class="lesson-copy">{{ lesson.english_translation|linebreaks }}</div></section></div>
+    {% if lesson.notes %}<section class="lesson-notes"><h2>Notes</h2>{{ lesson.notes|linebreaks }}</section>{% endif %}
+  </article>
+</main>
+{% endblock %}

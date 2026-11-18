@@ -1,22 +1,36 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.contrib.admin.utils import NestedObjects
 from django.db import transaction
+from django.db.models.deletion import ProtectedError
 from django.db.models import Count, F, Prefetch, Q
 from django.core.exceptions import PermissionDenied
 from django.http import JsonResponse
+from django.core.paginator import Paginator
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from accounts.models import User
-from .forms import LessonForm, LessonPhraseFormSet
+from .forms import (
+    LessonForm,
+    LessonPhraseFormSet,
+    PhraseCategoryForm,
+    PhraseForm,
+    PhraseRequestForm,
+    PhraseRequestReviewForm,
+    PhraseSearchForm,
+)
 from .models import (
     Lesson,
     LessonAttempt,
     LessonCategory,
     LessonPhrase,
     LessonProgress,
+    Phrase,
+    PhraseCategory,
     PhrasePractice,
+    PhraseRequest,
 )
 
 
@@ -221,6 +235,238 @@ def complete_lesson(request, slug):
         )
         messages.success(request, "Lesson completed. Nice work!")
     return redirect("core:lesson_detail", slug=lesson.slug)
+
+
+@login_required
+def phrasebook(request):
+    _require_role(request, User.Role.LEARNER)
+    search_form = PhraseSearchForm(request.GET or None)
+    query = search_form.cleaned_data.get("q", "") if search_form.is_valid() else ""
+    category_slug = request.GET.get("category", "")
+    categories = (
+        PhraseCategory.objects.annotate(
+            published_count=Count("phrases", filter=Q(phrases__is_published=True))
+        )
+        .filter(published_count__gt=0)
+        .order_by("name")
+    )
+    phrases = Phrase.objects.filter(is_published=True).select_related("category")
+    active_category = None
+    if category_slug:
+        active_category = get_object_or_404(categories, slug=category_slug)
+        phrases = phrases.filter(category=active_category)
+    if query:
+        phrases = phrases.filter(
+            Q(cebuano_text__icontains=query)
+            | Q(english_translation__icontains=query)
+            | Q(situation__icontains=query)
+            | Q(pronunciation_note__icontains=query)
+            | Q(category__name__icontains=query)
+        )
+    phrase_count = phrases.count()
+    page_obj = Paginator(phrases, 24).get_page(request.GET.get("page"))
+    return render(
+        request,
+        "core/phrasebook.html",
+        {
+            "search_form": search_form,
+            "query": query,
+            "categories": categories,
+            "active_category": active_category,
+            "phrases": page_obj.object_list,
+            "page_obj": page_obj,
+            "phrase_count": phrase_count,
+            "request_count": PhraseRequest.objects.filter(
+                submitted_by=request.user, status=PhraseRequest.Status.PENDING
+            ).count(),
+        },
+    )
+
+
+@login_required
+def phrase_request_create(request):
+    _require_role(request, User.Role.LEARNER)
+    form = PhraseRequestForm(request.POST or None)
+    form.fields["requested_category"].queryset = PhraseCategory.objects.all()
+    if request.method == "POST" and form.is_valid():
+        phrase_request = form.save(commit=False)
+        phrase_request.submitted_by = request.user
+        phrase_request.save()
+        messages.success(request, "Your phrase request was sent to the administrator.")
+        return redirect("core:phrase_requests")
+    return render(request, "core/phrase_request_form.html", {"form": form})
+
+
+@login_required
+def phrase_requests(request):
+    _require_role(request, User.Role.LEARNER)
+    requests = PhraseRequest.objects.filter(submitted_by=request.user).select_related(
+        "requested_category", "created_phrase"
+    )
+    return render(request, "core/phrase_requests.html", {"phrase_requests": requests})
+
+
+@login_required
+def admin_phrase_list(request):
+    _require_role(request, User.Role.ADMIN)
+    phrases = Phrase.objects.select_related("category", "created_by")
+    return render(request, "core/admin_phrase_list.html", {"phrases": phrases})
+
+
+@login_required
+def admin_phrase_create(request):
+    _require_role(request, User.Role.ADMIN)
+    form = PhraseForm(request.POST or None, request.FILES or None)
+    if request.method == "POST" and form.is_valid():
+        phrase = form.save(commit=False)
+        phrase.created_by = request.user
+        phrase.save()
+        messages.success(request, "Phrase added to the phrasebook.")
+        return redirect("core:admin_phrase_list")
+    return render(request, "core/phrase_form.html", {"form": form, "heading": "Add phrase"})
+
+
+@login_required
+def admin_phrase_update(request, phrase_id):
+    _require_role(request, User.Role.ADMIN)
+    phrase = get_object_or_404(Phrase, pk=phrase_id)
+    old_audio = phrase.audio.name
+    form = PhraseForm(request.POST or None, request.FILES or None, instance=phrase)
+    if request.method == "POST" and form.is_valid():
+        updated = form.save()
+        if old_audio and updated.audio.name != old_audio:
+            phrase.audio.storage.delete(old_audio)
+        messages.success(request, "Phrase updated successfully.")
+        return redirect("core:admin_phrase_list")
+    return render(
+        request,
+        "core/phrase_form.html",
+        {"form": form, "heading": "Edit phrase", "phrase": phrase},
+    )
+
+
+@login_required
+@require_POST
+def admin_phrase_delete(request, phrase_id):
+    _require_role(request, User.Role.ADMIN)
+    phrase = get_object_or_404(Phrase, pk=phrase_id)
+    if phrase.audio:
+        phrase.audio.delete(save=False)
+    phrase.delete()
+    messages.success(request, "Phrase deleted successfully.")
+    return redirect("core:admin_phrase_list")
+
+
+@login_required
+def admin_phrase_category_list(request):
+    _require_role(request, User.Role.ADMIN)
+    categories = PhraseCategory.objects.annotate(phrase_count=Count("phrases"))
+    return render(
+        request,
+        "core/admin_phrase_categories.html",
+        {"categories": categories},
+    )
+
+
+@login_required
+def admin_phrase_category_create(request):
+    _require_role(request, User.Role.ADMIN)
+    form = PhraseCategoryForm(request.POST or None)
+    if request.method == "POST" and form.is_valid():
+        form.save()
+        messages.success(request, "Phrase category created successfully.")
+        return redirect("core:admin_phrase_categories")
+    return render(
+        request,
+        "core/phrase_category_form.html",
+        {"form": form, "heading": "Add phrase category"},
+    )
+
+
+@login_required
+def admin_phrase_category_update(request, category_id):
+    _require_role(request, User.Role.ADMIN)
+    category = get_object_or_404(PhraseCategory, pk=category_id)
+    form = PhraseCategoryForm(request.POST or None, instance=category)
+    if request.method == "POST" and form.is_valid():
+        form.save()
+        messages.success(request, "Phrase category updated successfully.")
+        return redirect("core:admin_phrase_categories")
+    return render(
+        request,
+        "core/phrase_category_form.html",
+        {"form": form, "heading": "Edit phrase category", "category": category},
+    )
+
+
+@login_required
+@require_POST
+def admin_phrase_category_delete(request, category_id):
+    _require_role(request, User.Role.ADMIN)
+    category = get_object_or_404(PhraseCategory, pk=category_id)
+    try:
+        category.delete()
+    except ProtectedError:
+        messages.error(request, "This category still has phrases. Move or delete them first.")
+    else:
+        messages.success(request, "Phrase category deleted successfully.")
+    return redirect("core:admin_phrase_categories")
+
+
+@login_required
+def admin_phrase_requests(request):
+    _require_role(request, User.Role.ADMIN)
+    status = request.GET.get("status", PhraseRequest.Status.PENDING)
+    if status not in PhraseRequest.Status.values:
+        status = PhraseRequest.Status.PENDING
+    requests = PhraseRequest.objects.filter(status=status).select_related(
+        "submitted_by", "requested_category"
+    )
+    return render(
+        request,
+        "core/admin_phrase_requests.html",
+        {"phrase_requests": requests, "selected_status": status},
+    )
+
+
+@login_required
+def admin_phrase_request_review(request, request_id):
+    _require_role(request, User.Role.ADMIN)
+    phrase_request = get_object_or_404(PhraseRequest, pk=request_id)
+    if phrase_request.status != PhraseRequest.Status.PENDING:
+        messages.info(request, "This phrase request has already been reviewed.")
+        return redirect("core:admin_phrase_requests")
+    form = PhraseRequestReviewForm(
+        request.POST or None,
+        initial={
+            "category": phrase_request.requested_category_id,
+            "english_translation": phrase_request.english_translation,
+        },
+    )
+    if request.method == "POST" and form.is_valid():
+        with transaction.atomic():
+            decision = form.cleaned_data["decision"]
+            if decision == PhraseRequest.Status.APPROVED:
+                phrase = Phrase.objects.create(
+                    category=form.cleaned_data["category"],
+                    cebuano_text=phrase_request.requested_phrase,
+                    english_translation=form.cleaned_data["english_translation"],
+                    situation=phrase_request.situation,
+                    created_by=request.user,
+                )
+                phrase_request.created_phrase = phrase
+            phrase_request.status = decision
+            phrase_request.admin_note = form.cleaned_data["admin_note"]
+            phrase_request.reviewed_by = request.user
+            phrase_request.reviewed_at = timezone.now()
+            phrase_request.save()
+        messages.success(request, "Phrase request reviewed successfully.")
+        return redirect("core:admin_phrase_requests")
+    return render(
+        request,
+        "core/admin_phrase_request_review.html",
+        {"phrase_request": phrase_request, "form": form},
+    )
 
 
 @login_required

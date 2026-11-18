@@ -152,3 +152,100 @@ class LessonAttempt(models.Model):
 
     class Meta:
         ordering = ["-attempted_at"]
+
+
+class PhraseCategory(models.Model):
+    name = models.CharField(max_length=100, unique=True)
+    slug = models.SlugField(max_length=120, unique=True, blank=True)
+    description = models.CharField(max_length=300, blank=True)
+
+    class Meta:
+        ordering = ["name"]
+        verbose_name_plural = "phrase categories"
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            self.slug = slugify(self.name)
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return self.name
+
+
+class Phrase(models.Model):
+    category = models.ForeignKey(
+        PhraseCategory, on_delete=models.PROTECT, related_name="phrases"
+    )
+    cebuano_text = models.CharField(max_length=240)
+    english_translation = models.CharField(max_length=240)
+    situation = models.CharField(max_length=160)
+    pronunciation_note = models.CharField(max_length=300, blank=True)
+    audio = models.FileField(
+        storage=audio_storage,
+        upload_to="phrasebook-audio/",
+        blank=True,
+        validators=[FileExtensionValidator(["mp3", "wav", "ogg", "m4a"])],
+    )
+    is_published = models.BooleanField(default=True)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="created_phrases",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["category__name", "cebuano_text"]
+
+    def __str__(self):
+        return f"{self.cebuano_text} — {self.english_translation}"
+
+
+class PhraseRequest(models.Model):
+    class Status(models.TextChoices):
+        PENDING = "PENDING", "Pending review"
+        APPROVED = "APPROVED", "Approved"
+        REJECTED = "REJECTED", "Declined"
+
+    submitted_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="phrase_requests",
+    )
+    requested_phrase = models.CharField(max_length=240)
+    english_translation = models.CharField(max_length=240, blank=True)
+    situation = models.CharField(max_length=160)
+    requested_category = models.ForeignKey(
+        PhraseCategory,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="requests",
+    )
+    status = models.CharField(
+        max_length=10, choices=Status.choices, default=Status.PENDING
+    )
+    admin_note = models.CharField(max_length=300, blank=True)
+    reviewed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="reviewed_phrase_requests",
+    )
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+    created_phrase = models.OneToOneField(
+        Phrase,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="source_request",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["status", "-created_at"]
+
+    def __str__(self):
+        return f"{self.requested_phrase} — {self.get_status_display()}"

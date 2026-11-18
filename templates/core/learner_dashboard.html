@@ -24,7 +24,7 @@
       <nav class="learner-nav">
         <a class="learner-nav__link learner-nav__link--active" href="{% url 'core:learner_dashboard' %}" aria-current="page"><span aria-hidden="true">⌂</span> Dashboard</a>
         <a class="learner-nav__link" href="{% url 'core:lesson_list' %}"><span aria-hidden="true">◉</span> Lessons</a>
-        <span class="learner-nav__link learner-nav__link--disabled"><span aria-hidden="true">▤</span> Phrasebook <small>Coming soon</small></span>
+        <a class="learner-nav__link" href="{% url 'core:phrasebook' %}"><span aria-hidden="true">?</span> Phrasebook</a>
         <span class="learner-nav__link learner-nav__link--disabled"><span aria-hidden="true">✓</span> Quizzes <small>Coming soon</small></span>
         <a class="learner-nav__link" href="{% url 'accounts:profile' %}"><span aria-hidden="true">◎</span> My Profile</a>
         <a class="learner-nav__link learner-nav__link--external" href="{% url 'core:home' %}">Back to website <span aria-hidden="true">↗</span></a>

@@ -1,12 +1,13 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
+from django.db.models import Count, Prefetch, Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
 from accounts.models import User
 from .forms import LessonForm
-from .models import Lesson
+from .models import Lesson, LessonCategory
 
 
 def home(request):
@@ -47,8 +48,30 @@ def _require_role(request, role):
 @login_required
 def lesson_list(request):
     _require_role(request, User.Role.LEARNER)
+    categories = (
+        LessonCategory.objects.annotate(
+            published_count=Count("lessons", filter=Q(lessons__is_published=True))
+        )
+        .filter(published_count__gt=0)
+        .prefetch_related(
+            Prefetch(
+                "lessons",
+                queryset=Lesson.objects.filter(is_published=True).order_by("position", "title"),
+                to_attr="published_lessons",
+            )
+        )
+    )
     lessons = Lesson.objects.filter(is_published=True).select_related("category")
-    return render(request, "core/lesson_list.html", {"lessons": lessons})
+    category = None
+    category_slug = request.GET.get("category", "")
+    if category_slug:
+        category = get_object_or_404(categories, slug=category_slug)
+        lessons = lessons.filter(category=category)
+    return render(
+        request,
+        "core/lesson_list.html",
+        {"categories": categories, "lessons": lessons, "category_filter": category},
+    )
 
 
 @login_required

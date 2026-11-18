@@ -8,15 +8,17 @@ Visit **[bisdak-basics.onrender.com](https://bisdak-basics.onrender.com/)**.
 
 ## What is implemented
 
-This project is being built incrementally. The current account-focused checkpoint includes:
+This project is being built incrementally. The current checkpoint includes:
 
 - Public, responsive landing page.
 - Learner registration, login, and logout using Django authentication and hashed passwords.
 - Role-based learner and administrator dashboards. Dashboard views require login and reject users with the wrong role.
 - A private profile page where a signed-in user can view and update their own name, email, contact number, location, learning goal, and bio.
+- Administrator lesson and category management, including drafts, English translations, Cebuano content, and optional native-speaker audio uploads.
+- A learner lesson library with published lesson detail pages and audio playback.
 - PostgreSQL-only database configuration and WhiteNoise static file serving for deployment.
 
-Lessons, quizzes, phrasebook content, and learner progress tracking are future increments.
+Phrasebook content, quizzes, grammar assessments, lesson completion tracking, pronunciation recording, feedback, reports, and certificates are future increments.
 
 ## Technology
 
@@ -41,13 +43,16 @@ python -m pip install -r requirements.txt
 Copy-Item .env.example .env
 ```
 
-Edit `.env` and set a private `SECRET_KEY` and your PostgreSQL `DATABASE_URL`. For example:
+Edit `.env` and set a private `SECRET_KEY` and your PostgreSQL `DATABASE_URL`. Lesson audio uploads work locally through Django's media folder. For production uploads, create a **public** `lesson-audio` bucket in Supabase Storage with a 15 MB file-size limit and audio MIME types enabled, then set its project URL and server-side service role key in `.env`. Never expose the service role key in client code or commit it. For example:
 
 ```dotenv
 SECRET_KEY=your-long-random-secret
 DEBUG=True
 ALLOWED_HOSTS=127.0.0.1,localhost
 DATABASE_URL=postgresql://postgres:your-password@localhost:5432/bisdak_basics
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=your-server-side-service-role-key
+SUPABASE_STORAGE_BUCKET=lesson-audio
 ```
 
 Create the `bisdak_basics` database first, then run:
@@ -87,6 +92,9 @@ Set these environment variables in the Render dashboard:
 | `DEBUG` | `False` |
 | `DATABASE_URL` | A PostgreSQL connection string from your database provider. |
 | `DB_CONN_MAX_AGE` | Optional; defaults to `60`. |
+| `SUPABASE_URL` | Your Supabase project URL for lesson audio uploads. |
+| `SUPABASE_SERVICE_ROLE_KEY` | Server-only service role key used by Django to upload and delete lesson audio. |
+| `SUPABASE_STORAGE_BUCKET` | Public Storage bucket name; defaults to `lesson-audio`. |
 
 Render supplies `RENDER_EXTERNAL_HOSTNAME`; the Django settings add it to `ALLOWED_HOSTS` automatically. If using a custom domain, set `ALLOWED_HOSTS` to include that host. Never paste credentials into Git or this README.
 
@@ -99,6 +107,8 @@ python manage.py createsuperuser
 ```
 
 The learner and administrator dashboards are available after login at `/dashboard/learner/` and `/dashboard/admin/`; `/dashboard/` routes each user to the dashboard for their role.
+
+Learners can open published lessons at `/lessons/`. Administrators can manage lessons at `/dashboard/admin/lessons/`; lesson categories can be managed in Django admin. Local audio files are stored under `media/` while `DEBUG=True`.
 
 ## Repository safety
 

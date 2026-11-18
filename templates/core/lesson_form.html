@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}{{ heading }} | Bisdak Basics{% endblock %}
+{% block content %}
+<main class="lesson-page" id="main-content">
+  <a href="{% url 'core:admin_lesson_list' %}" class="lesson-back">← Manage lessons</a>
+  <header class="lesson-heading"><p class="eyebrow">Administrator content management</p><h1>{{ heading }}</h1></header>
+  <form class="lesson-form" method="post" enctype="multipart/form-data">{% csrf_token %}
+    {% if form.non_field_errors %}<div class="lesson-form__errors">{{ form.non_field_errors }}</div>{% endif %}
+    {% for field in form %}<div class="lesson-field{% if field.errors %} lesson-field--error{% endif %}"><label for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %} <span aria-hidden="true">*</span>{% endif %}</label>{{ field }}{% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}{{ field.errors }}</div>{% endfor %}
+    <div class="lesson-form__actions"><button class="button button--primary" type="submit">Save lesson</button><a class="button button--outline" href="{% url 'core:admin_lesson_list' %}">Cancel</a></div>
+  </form>
+</main>
+{% endblock %}

@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}Manage lessons | Bisdak Basics{% endblock %}
+{% block content %}
+<main class="lesson-page" id="main-content">
+  <a href="{% url 'core:admin_dashboard' %}" class="lesson-back">← Administrator dashboard</a>
+  <header class="lesson-heading lesson-heading--row"><div><p class="eyebrow">Content management</p><h1>Lessons</h1><p>Create and maintain situational Cebuano lessons.</p></div><a class="button button--primary" href="{% url 'core:admin_lesson_create' %}">Add a lesson</a></header>
+  <div class="lesson-admin-list">
+    {% for lesson in lessons %}<article class="lesson-admin-row"><div><h2>{{ lesson.title }}</h2><p>{{ lesson.category.name }} · {{ lesson.situation }} · {% if lesson.is_published %}Published{% else %}Draft{% endif %}</p></div><div class="lesson-admin-actions"><a class="button button--outline" href="{% url 'core:admin_lesson_update' lesson.slug %}">Edit</a><form method="post" action="{% url 'core:admin_lesson_delete' lesson.slug %}" onsubmit="return confirm('Delete this lesson?');">{% csrf_token %}<button class="button button--danger" type="submit">Delete</button></form></div></article>
+    {% empty %}<p class="lesson-empty">No lessons yet. Add your first lesson to get started.</p>{% endfor %}
+  </div>
+</main>
+{% endblock %}

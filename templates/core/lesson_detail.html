@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}{{ lesson.title }} | Bisdak Basics{% endblock %}
+{% block body_class %}lessons-page{% endblock %}
+{% block content %}
+<header class="lessons-header">
+  <a class="lessons-brand" href="{% url 'core:learner_dashboard' %}">
+    <span class="lessons-brand__mark"><img src="{% static 'images/figma-bito-header.svg' %}" alt=""></span>
+    <span>Bisdak Basics</span>
+  </a>
+  <p class="lessons-header__tagline">Your everyday Cebuano</p>
+  <a class="lessons-profile" href="{% url 'accounts:profile' %}">My Profile</a>
+  <nav class="lessons-mobile-nav" aria-label="Learner navigation">
+    <a href="{% url 'core:learner_dashboard' %}">Dashboard</a>
+    <a href="{% url 'core:lesson_list' %}" aria-current="page">Lessons</a>
+    <span aria-disabled="true">Phrasebook</span>
+    <span aria-disabled="true">Quizzes</span>
+    <a href="{% url 'accounts:profile' %}">My Profile</a>
+  </nav>
+</header>
+
+<div class="lessons-layout">
+  <aside class="lessons-sidebar" aria-label="Learner navigation">
+    <p class="lessons-sidebar__label">Learn at your pace</p>
+    <nav class="lessons-sidebar__nav">
+      <a href="{% url 'core:learner_dashboard' %}">Dashboard</a>
+      <a class="is-active" href="{% url 'core:lesson_list' %}" aria-current="page">Lessons</a>
+      <span aria-disabled="true">Phrasebook</span>
+      <span aria-disabled="true">Quizzes</span>
+      <a href="{% url 'accounts:profile' %}">My Profile</a>
+    </nav>
+    <p class="lessons-sidebar__quote">One small conversation<br>can open a new door.</p>
+    <a class="lessons-sidebar__back" href="{% url 'core:home' %}">Back to website <span aria-hidden="true">↗</span></a>
+  </aside>
+
+  <main class="lessons-main lesson-detail-main" id="main-content">
+    <p class="lessons-eyebrow">Lessons / {{ lesson.category.name }}</p>
+    <h1>{{ lesson.title }}</h1>
+    <p class="lessons-intro">Lesson {{ lesson.position|add:1 }} · {{ lesson.situation }} · {{ lesson.get_difficulty_display }} · {{ lesson.estimated_minutes }} minutes</p>
+
+    <section class="lesson-objective" aria-labelledby="lesson-objective-heading">
+      <h2 id="lesson-objective-heading">{% if lesson.learning_objectives %}By the end, you can…{% else %}About this lesson{% endif %}</h2>
+      <p>{% if lesson.learning_objectives %}{{ lesson.learning_objectives|linebreaksbr }}{% else %}{{ lesson.summary }}{% endif %}</p>
+    </section>
+
+    {% if phrase_count %}
+      <div class="lesson-progress-copy" aria-live="polite">
+        <span>Your progress · <strong id="practiced-count">{{ practiced_count }}</strong> of <span id="phrase-count">{{ phrase_count }}</span> phrases practiced</span>
+        {% if progress.completed_at %}<span class="lesson-complete-badge">✓ Lesson complete</span>{% endif %}
+      </div>
+      <div class="lesson-progress-track" role="progressbar" aria-label="Lesson phrase practice" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ practice_percent }}">
+        <span id="practice-progress" style="width: {{ practice_percent }}%"></span>
+      </div>
+    {% elif progress.completed_at %}
+      <p class="lesson-complete-badge lesson-complete-badge--standalone">✓ Lesson complete</p>
+    {% endif %}
+
+    <div class="lesson-practice-grid">
+      <section class="lesson-current-card" aria-labelledby="current-phrase-heading">
+        {% if current_phrase %}
+          <p class="lesson-phrase-label">Phrase {{ current_phrase.display_position }} / {{ phrase_count }} · {{ lesson.situation }}</p>
+          <h2 id="current-phrase-heading">{{ current_phrase.cebuano_text }}</h2>
+          <p class="lesson-current-card__translation">{{ current_phrase.english_translation }}</p>
+          {% if current_phrase.audio %}
+            <audio id="current-native-audio" data-native-reference preload="none" src="{{ current_phrase.audio.url }}"></audio>
+            <button class="lesson-audio-button" type="button" data-play-audio="current-native-audio">▶ <span>Listen to native speaker</span></button>
+          {% elif lesson.audio %}
+            <audio id="current-native-audio" data-native-reference preload="none" src="{{ lesson.audio.url }}"></audio>
+            <button class="lesson-audio-button" type="button" data-play-audio="current-native-audio">▶ <span>Listen to native speaker</span></button>
+          {% else %}
+            <p class="lesson-audio-unavailable">Native-speaker audio will be added soon.</p>
+          {% endif %}
+          <p class="lesson-current-card__hint">{% if current_phrase.usage_note %}{{ current_phrase.usage_note }}{% else %}Listen first, then try saying it naturally.{% endif %}</p>
+          <p class="lesson-current-card__context">Use this phrase in {{ lesson.situation|lower }}.</p>
+        {% else %}
+          <p class="lesson-phrase-label">Lesson content</p>
+          <h2 id="current-phrase-heading">{{ lesson.cebuano_text }}</h2>
+          <p class="lesson-current-card__translation">{{ lesson.english_translation }}</p>
+          {% if lesson.audio %}<audio id="current-native-audio" data-native-reference preload="none" src="{{ lesson.audio.url }}"></audio><button class="lesson-audio-button" type="button" data-play-audio="current-native-audio">▶ <span>Listen to native speaker</span></button>{% else %}<p class="lesson-audio-unavailable">Native-speaker audio will be added soon.</p>{% endif %}
+          {% if lesson.notes %}<p class="lesson-current-card__hint">{{ lesson.notes }}</p>{% endif %}
+        {% endif %}
+        <p class="lesson-audio-status" data-audio-status aria-live="polite"></p>
+      </section>
+
+      {% if current_phrase %}
+        <section class="lesson-record-card" aria-labelledby="record-heading" data-recording-panel data-practice-url="{% url 'core:record_phrase_practice' lesson.slug current_phrase.pk %}">
+          <h2 id="record-heading">Now, your turn.</h2>
+          <p>Record yourself saying the phrase. Only you can hear your practice.</p>
+          <form data-practice-form>{% csrf_token %}</form>
+          <button class="lesson-record-button" type="button" data-start-recording>● <span>Start recording</span></button>
+          <button class="lesson-record-button lesson-record-button--stop" type="button" data-stop-recording hidden>■ <span>Stop recording</span></button>
+          <button class="lesson-replay-button" type="button" data-replay-recording disabled>▶ <span>Replay my pronunciation</span></button>
+          <p class="lesson-record-status" data-record-status aria-live="polite">Your browser will ask for microphone access. Recordings are not uploaded.</p>
+          <audio data-recorded-audio hidden></audio>
+        </section>
+      {% endif %}
+    </div>
+
+    {% if phrases %}
+      <section class="lesson-phrase-list" aria-labelledby="keep-close-heading">
+        <h2 id="keep-close-heading">Keep these close</h2>
+        {% for phrase in phrases %}
+          {% if phrase.pk != current_phrase.pk %}
+            <div class="lesson-phrase-row">
+              <p class="lesson-phrase-row__cebuano">{{ phrase.cebuano_text }}</p>
+              <p class="lesson-phrase-row__english">{{ phrase.english_translation }}</p>
+              {% if phrase.audio %}
+                <audio id="phrase-audio-{{ phrase.pk }}" data-native-reference preload="none" src="{{ phrase.audio.url }}"></audio>
+                <button class="lesson-phrase-listen" type="button" data-play-audio="phrase-audio-{{ phrase.pk }}">▶ <span>Listen</span></button>
+              {% else %}<span class="lesson-phrase-no-audio">Audio coming soon</span>{% endif %}
+            </div>
+          {% endif %}
+        {% endfor %}
+      </section>
+    {% endif %}
+
+    {% if lesson.checkpoint_question %}
+      <form class="lesson-checkpoint" method="post" action="{% url 'core:submit_lesson_checkpoint' lesson.slug %}">
+        {% csrf_token %}
+        <h2>A quick little practice</h2>
+        <fieldset>
+          <legend>{{ lesson.checkpoint_question }}</legend>
+          <div class="lesson-checkpoint-options">
+            <label class="lesson-checkpoint-option"><input type="radio" name="selected_answer" value="A"{% if last_attempt.selected_answer == "A" %} checked{% endif %}><span>{{ lesson.checkpoint_option_a }}</span></label>
+            <label class="lesson-checkpoint-option"><input type="radio" name="selected_answer" value="B"{% if last_attempt.selected_answer == "B" %} checked{% endif %}><span>{{ lesson.checkpoint_option_b }}</span></label>
+          </div>
+        </fieldset>
+        {% if last_attempt %}<p class="lesson-checkpoint-result">Latest score: {{ last_attempt.score }}% · {% if last_attempt.is_correct %}Correct{% else %}Review the phrases and try again{% endif %}</p>{% endif %}
+        <button class="lesson-record-button" type="submit">Check your answer <span aria-hidden="true">→</span></button>
+      </form>
+    {% elif not progress.completed_at %}
+      <form method="post" action="{% url 'core:complete_lesson' lesson.slug %}" class="lesson-complete-form">{% csrf_token %}<button class="lesson-record-button" type="submit">Mark lesson complete <span aria-hidden="true">→</span></button></form>
+    {% endif %}
+  </main>
+</div>
+{% endblock %}
+{% block scripts %}<script src="{% static 'js/lesson.js' %}" defer></script>{% endblock %}

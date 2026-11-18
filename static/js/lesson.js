@@ -1,0 +1,112 @@
+document.querySelectorAll("[data-play-audio]").forEach((button) => {
+  button.addEventListener("click", async () => {
+    const audio = document.getElementById(button.dataset.playAudio);
+    const status = document.querySelector("[data-audio-status]");
+    if (!audio) return;
+
+    document.querySelectorAll("audio[data-native-reference]").forEach((item) => {
+      if (item !== audio) item.pause();
+    });
+    try {
+      await audio.play();
+      if (status) status.textContent = "Playing native-speaker audio.";
+      audio.addEventListener("ended", () => {
+        if (status) status.textContent = "Audio finished. Listen again or try saying the phrase.";
+      }, { once: true });
+    } catch {
+      if (status) status.textContent = "Audio could not be played. Please try again.";
+    }
+  });
+});
+
+const recordingPanel = document.querySelector("[data-recording-panel]");
+if (recordingPanel) {
+  const startButton = recordingPanel.querySelector("[data-start-recording]");
+  const stopButton = recordingPanel.querySelector("[data-stop-recording]");
+  const replayButton = recordingPanel.querySelector("[data-replay-recording]");
+  const status = recordingPanel.querySelector("[data-record-status]");
+  const playback = recordingPanel.querySelector("[data-recorded-audio]");
+  const csrfInput = recordingPanel.querySelector("[name=csrfmiddlewaretoken]");
+  let mediaRecorder;
+  let microphoneStream;
+  let recordingUrl;
+
+  startButton.addEventListener("click", async () => {
+    if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) {
+      status.textContent = "This browser does not support audio recording. Try a recent browser on a secure connection.";
+      return;
+    }
+    try {
+      microphoneStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const chunks = [];
+      mediaRecorder = new MediaRecorder(microphoneStream);
+      mediaRecorder.addEventListener("dataavailable", (event) => {
+        if (event.data.size) chunks.push(event.data);
+      });
+      mediaRecorder.addEventListener("stop", async () => {
+        const recording = new Blob(chunks, { type: mediaRecorder.mimeType || "audio/webm" });
+        if (recordingUrl) URL.revokeObjectURL(recordingUrl);
+        recordingUrl = URL.createObjectURL(recording);
+        playback.src = recordingUrl;
+        replayButton.disabled = false;
+        microphoneStream.getTracks().forEach((track) => track.stop());
+        stopButton.hidden = true;
+        startButton.hidden = false;
+        status.textContent = "Recording saved on this device. It was not uploaded.";
+        await savePractice();
+      });
+      mediaRecorder.start();
+      startButton.hidden = true;
+      stopButton.hidden = false;
+      replayButton.disabled = true;
+      status.textContent = "Recording… say the phrase naturally, then stop when you are ready.";
+    } catch (error) {
+      status.textContent = error.name === "NotAllowedError"
+        ? "Microphone access was denied. Allow microphone access in your browser to record."
+        : "The microphone could not be started. Check your device and try again.";
+      microphoneStream?.getTracks().forEach((track) => track.stop());
+    }
+  });
+
+  stopButton.addEventListener("click", () => {
+    if (mediaRecorder?.state === "recording") mediaRecorder.stop();
+  });
+
+  replayButton.addEventListener("click", async () => {
+    if (!playback.src) return;
+    try {
+      await playback.play();
+      status.textContent = "Playing your recording on this device.";
+    } catch {
+      status.textContent = "Your recording could not be replayed. Record the phrase again.";
+    }
+  });
+
+  async function savePractice() {
+    try {
+      const response = await fetch(recordingPanel.dataset.practiceUrl, {
+        method: "POST",
+        credentials: "same-origin",
+        headers: {
+          "X-CSRFToken": csrfInput.value,
+          "Accept": "application/json",
+        },
+      });
+      if (!response.ok) throw new Error("Practice could not be saved");
+      const result = await response.json();
+      document.getElementById("practiced-count").textContent = result.practiced_count;
+      document.getElementById("phrase-count").textContent = result.phrase_count;
+      document.getElementById("practice-progress").style.width = `${result.progress_percent}%`;
+      const progressBar = document.querySelector("[role=progressbar]");
+      progressBar.setAttribute("aria-valuenow", result.progress_percent);
+      status.textContent = "Practice progress saved. Your recording remains on this device only.";
+    } catch {
+      status.textContent = "Your recording is ready to replay, but practice progress could not be saved. Check your connection and record again.";
+    }
+  }
+
+  window.addEventListener("beforeunload", () => {
+    if (recordingUrl) URL.revokeObjectURL(recordingUrl);
+    microphoneStream?.getTracks().forEach((track) => track.stop());
+  });
+}

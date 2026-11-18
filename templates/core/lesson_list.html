@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Lessons | Bisdak Basics{% endblock %}
+{% block body_class %}lessons-page{% endblock %}
+{% block content %}
+<header class="lessons-header">
+  <a class="lessons-brand" href="{% url 'core:learner_dashboard' %}">
+    <span class="lessons-brand__mark"><img src="{% static 'images/figma-bito-header.svg' %}" alt=""></span>
+    <span>Bisdak Basics</span>
+  </a>
+  <p class="lessons-header__tagline">Your everyday Cebuano</p>
+  <a class="lessons-profile" href="{% url 'accounts:profile' %}">My Profile</a>
+  <nav class="lessons-mobile-nav" aria-label="Learner navigation">
+    <a href="{% url 'core:learner_dashboard' %}">Dashboard</a>
+    <a href="{% url 'core:lesson_list' %}" aria-current="page">Lessons</a>
+    <span aria-disabled="true">Phrasebook</span>
+    <span aria-disabled="true">Quizzes</span>
+    <a href="{% url 'accounts:profile' %}">My Profile</a>
+  </nav>
+</header>
+
+<div class="lessons-layout">
+  <aside class="lessons-sidebar" aria-label="Learner navigation">
+    <p class="lessons-sidebar__label">Learn at your pace</p>
+    <nav class="lessons-sidebar__nav">
+      <a href="{% url 'core:learner_dashboard' %}">Dashboard</a>
+      <a class="is-active" href="{% url 'core:lesson_list' %}" aria-current="page">Lessons</a>
+      <span aria-disabled="true">Phrasebook</span>
+      <span aria-disabled="true">Quizzes</span>
+      <a href="{% url 'accounts:profile' %}">My Profile</a>
+    </nav>
+    <p class="lessons-sidebar__quote">One small conversation<br>can open a new door.</p>
+    <a class="lessons-sidebar__back" href="{% url 'core:home' %}">Back to website <span aria-hidden="true">↗</span></a>
+  </aside>
+
+  <main class="lessons-main" id="main-content">
+    {% if category_filter %}
+      <a class="lessons-back" href="{% url 'core:lesson_list' %}">← All lesson situations</a>
+      <p class="lessons-eyebrow">Everyday situation</p>
+      <h1>{{ category_filter.name }}</h1>
+      {% if category_filter.description %}<p class="lessons-intro">{{ category_filter.description }}</p>{% endif %}
+      <div class="lessons-list">
+        {% for lesson in lessons %}
+          <article class="lessons-list-card">
+            <div><p class="lessons-list-card__label">{{ lesson.situation }}</p><h2>{{ lesson.title }}</h2><p>{{ lesson.summary }}</p></div>
+            <a class="lessons-button lessons-button--primary" href="{% url 'core:lesson_detail' lesson.slug %}">Open lesson <span aria-hidden="true">→</span></a>
+          </article>
+        {% empty %}<p class="lessons-empty">There are no published lessons in this situation yet.</p>{% endfor %}
+      </div>
+    {% else %}
+      <p class="lessons-eyebrow">Your everyday adventures</p>
+      <h1>Small lessons. Big little wins.</h1>
+      {% if published_lesson_count %}
+        <p class="lessons-intro">{{ completed_lesson_count }} of {{ published_lesson_count }} lessons completed · Keep your conversation trail growing.</p>
+        <div class="lessons-library-progress" role="progressbar" aria-label="Overall lesson completion" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ lesson_progress_percent }}"><span style="width: {{ lesson_progress_percent }}%"></span></div>
+      {% else %}<p class="lessons-intro">Explore {{ categories|length }} everyday situation{{ categories|length|pluralize }} and build your Cebuano one conversation at a time.</p>{% endif %}
+
+      {% if categories %}
+        <div class="lessons-topic-grid">
+          {% for category in categories %}
+            {% cycle "mint" "sunny" "blue" "soft" as card_color silent %}
+            <article class="lessons-topic-card lessons-topic-card--{{ card_color }}">
+              <p class="lessons-topic-card__eyebrow">{{ forloop.counter|stringformat:"02d" }} / SITUATION</p>
+              <h2>{{ category.name }}</h2>
+              <p class="lessons-topic-card__description">{% if category.description %}{{ category.description }}{% elif category.published_lessons %}{{ category.published_lessons.0.summary }}{% else %}Explore practical Cebuano lessons for this situation.{% endif %}</p>
+              <p class="lessons-topic-card__meta">{{ category.published_count }} lesson{{ category.published_count|pluralize }} available</p>
+              <a class="lessons-button lessons-button--primary" href="?category={{ category.slug }}">Explore lessons <span aria-hidden="true">→</span></a>
+            </article>
+          {% endfor %}
+        </div>
+        <aside class="lessons-tip">
+          <span class="lessons-tip__art"><img src="{% static 'images/figma-bito-tip.svg' %}" alt=""></span>
+          <div class="lessons-tip__copy">
+            <h2>Not quite ready for the next step?</h2>
+            <p>Keep useful phrases close. Listening again is learning, too.</p>
+            <span class="lessons-button lessons-button--outline" aria-disabled="true">Explore Phrasebook <span aria-hidden="true">→</span></span>
+          </div>
+        </aside>
+      {% else %}
+        <section class="lessons-empty-state">
+          <span class="lessons-tip__art"><img src="{% static 'images/figma-bito-tip.svg' %}" alt=""></span>
+          <div><h2>Your first lesson is on its way.</h2><p>New situational lessons will appear here when they are published.</p></div>
+        </section>
+      {% endif %}
+    {% endif %}
+  </main>
+</div>
+{% endblock %}

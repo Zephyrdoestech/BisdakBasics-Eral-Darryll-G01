@@ -13,7 +13,7 @@
   <nav class="lessons-mobile-nav" aria-label="Learner navigation">
     <a href="{% url 'core:learner_dashboard' %}">Dashboard</a>
     <a href="{% url 'core:lesson_list' %}" aria-current="page">Lessons</a>
-    <span aria-disabled="true">Phrasebook</span>
+    <a href="{% url 'core:phrasebook' %}">Phrasebook</a>
     <span aria-disabled="true">Quizzes</span>
     <a href="{% url 'accounts:profile' %}">My Profile</a>
   </nav>
@@ -25,7 +25,7 @@
     <nav class="lessons-sidebar__nav">
       <a href="{% url 'core:learner_dashboard' %}">Dashboard</a>
       <a class="is-active" href="{% url 'core:lesson_list' %}" aria-current="page">Lessons</a>
-      <span aria-disabled="true">Phrasebook</span>
+      <a href="{% url 'core:phrasebook' %}">Phrasebook</a>
       <span aria-disabled="true">Quizzes</span>
       <a href="{% url 'accounts:profile' %}">My Profile</a>
     </nav>
@@ -72,6 +72,9 @@
           {% endif %}
           <p class="lesson-current-card__hint">{% if current_phrase.usage_note %}{{ current_phrase.usage_note }}{% else %}Listen first, then try saying it naturally.{% endif %}</p>
           <p class="lesson-current-card__context">Use this phrase in {{ lesson.situation|lower }}.</p>
+          {% if next_phrase %}
+            <a class="lessons-back" style="margin-top: 14px; margin-bottom: 0;" href="?phrase={{ next_phrase.pk }}">Next phrase: {{ next_phrase.cebuano_text }} →</a>
+          {% endif %}
         {% else %}
           <p class="lesson-phrase-label">Lesson content</p>
           <h2 id="current-phrase-heading">{{ lesson.cebuano_text }}</h2>
@@ -102,12 +105,12 @@
         {% for phrase in phrases %}
           {% if phrase.pk != current_phrase.pk %}
             <div class="lesson-phrase-row">
-              <p class="lesson-phrase-row__cebuano">{{ phrase.cebuano_text }}</p>
+              <p class="lesson-phrase-row__cebuano"><a href="?phrase={{ phrase.pk }}" style="text-decoration: none;">{% if phrase.is_practiced %}✓ {% endif %}{{ phrase.cebuano_text }}</a></p>
               <p class="lesson-phrase-row__english">{{ phrase.english_translation }}</p>
               {% if phrase.audio %}
                 <audio id="phrase-audio-{{ phrase.pk }}" data-native-reference preload="none" src="{{ phrase.audio.url }}"></audio>
                 <button class="lesson-phrase-listen" type="button" data-play-audio="phrase-audio-{{ phrase.pk }}">▶ <span>Listen</span></button>
-              {% else %}<span class="lesson-phrase-no-audio">Audio coming soon</span>{% endif %}
+              {% else %}<a class="lesson-phrase-listen" href="?phrase={{ phrase.pk }}" style="text-decoration: none; justify-content: center;">Practice →</a>{% endif %}
             </div>
           {% endif %}
         {% endfor %}
@@ -130,6 +133,14 @@
       </form>
     {% elif not progress.completed_at %}
       <form method="post" action="{% url 'core:complete_lesson' lesson.slug %}" class="lesson-complete-form">{% csrf_token %}<button class="lesson-record-button" type="submit">Mark lesson complete <span aria-hidden="true">→</span></button></form>
+    {% endif %}
+    {% if progress.completed_at %}
+      <div class="dashboard-shortcuts" style="margin-top: 20px;">
+        <a href="{% url 'core:learner_dashboard' %}">← Back to Dashboard</a>
+        {% if next_lesson %}
+          <a href="{% url 'core:lesson_detail' next_lesson.slug %}">Next lesson: {{ next_lesson.title }} <span aria-hidden="true">→</span></a>
+        {% endif %}
+      </div>
     {% endif %}
   </main>
 </div>

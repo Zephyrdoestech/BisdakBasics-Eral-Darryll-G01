@@ -7,6 +7,7 @@ from django.db import IntegrityError, transaction
 from django.shortcuts import redirect, render
 from django.views.decorators.http import require_POST
 
+from core.models import LessonAttempt, LessonProgress, PhrasePractice
 from .forms import (
     AdministratorAuthenticationForm,
     ProfileForm,
@@ -79,8 +80,39 @@ def profile(request):
             messages.success(request, "Your profile was saved successfully.")
             return redirect("accounts:profile")
 
+    completed_lessons = list(
+        LessonProgress.objects.filter(
+            user=request.user,
+            lesson__is_published=True,
+            completed_at__isnull=False,
+        )
+        .select_related("lesson")
+        .order_by("-completed_at")[:5]
+    )
+    completed_lesson_count = LessonProgress.objects.filter(
+        user=request.user,
+        lesson__is_published=True,
+        completed_at__isnull=False,
+    ).count()
+    practiced_phrase_count = PhrasePractice.objects.filter(user=request.user).count()
+    latest_attempt = (
+        LessonAttempt.objects.filter(user=request.user)
+        .select_related("lesson")
+        .order_by("-attempted_at")
+        .first()
+    )
+    xp_points = (completed_lesson_count * 20) + (practiced_phrase_count * 5)
+
     return render(
         request,
         "accounts/profile.html",
-        {"form": form, "profile": profile_record},
+        {
+            "form": form,
+            "profile": profile_record,
+            "completed_lessons": completed_lessons,
+            "completed_lesson_count": completed_lesson_count,
+            "practiced_phrase_count": practiced_phrase_count,
+            "latest_attempt": latest_attempt,
+            "xp_points": xp_points,
+        },
     )

@@ -2,83 +2,131 @@
 {% load static %}
 
 {% block title %}Your learning dashboard | Bisdak Basics{% endblock %}
-{% block body_class %}dashboard-page{% endblock %}
+{% block body_class %}lessons-page learner-dashboard-page{% endblock %}
+
 {% block content %}
-<div class="dashboard-shell">
-  <header class="dashboard-header page-width">
-    <a class="brand" href="{% url 'core:home' %}">
-      <img class="brand__logo" src="{% static 'images/bito-flying-fish.png' %}" alt="">
-      <span>Bisdak Basics</span>
-    </a>
-    <div class="dashboard-header__user">
-      <span class="role-pill">Learner</span>
-      <span class="user-name">{{ request.user.get_full_name|default:request.user.username }}</span>
-      <a class="text-button" href="{% url 'accounts:profile' %}">My profile</a>
-      <form method="post" action="{% url 'accounts:logout' %}">{% csrf_token %}<button class="text-button" type="submit">Log out</button></form>
-    </div>
-  </header>
+<header class="lessons-header">
+  <a class="lessons-brand" href="{% url 'core:learner_dashboard' %}">
+    <span class="lessons-brand__mark"><img src="{% static 'images/figma-bito-header.svg' %}" alt="" width="53" height="41" decoding="async"></span>
+    <span>Bisdak Basics</span>
+  </a>
+  <p class="lessons-header__tagline">Your everyday Cebuano</p>
+  <a class="lessons-profile" href="{% url 'accounts:profile' %}">My Profile</a>
+  <nav class="lessons-mobile-nav" aria-label="Learner navigation">
+    <a href="{% url 'core:learner_dashboard' %}" aria-current="page">Dashboard</a>
+    <a href="{% url 'core:lesson_list' %}">Lessons</a>
+    <a href="{% url 'core:phrasebook' %}">Phrasebook</a>
+    <span aria-disabled="true">Quizzes</span>
+    <a href="{% url 'accounts:profile' %}">My Profile</a>
+  </nav>
+</header>
 
-  <div class="learner-layout">
-    <aside class="learner-sidebar" aria-label="Learner navigation">
-      <p class="eyebrow">Your learning space</p>
-      <nav class="learner-nav">
-        <a class="learner-nav__link learner-nav__link--active" href="{% url 'core:learner_dashboard' %}" aria-current="page"><span aria-hidden="true">⌂</span> Dashboard</a>
-        <a class="learner-nav__link" href="{% url 'core:lesson_list' %}"><span aria-hidden="true">◉</span> Lessons</a>
-        <a class="learner-nav__link" href="{% url 'core:phrasebook' %}"><span aria-hidden="true">?</span> Phrasebook</a>
-        <span class="learner-nav__link learner-nav__link--disabled"><span aria-hidden="true">✓</span> Quizzes <small>Coming soon</small></span>
-        <a class="learner-nav__link" href="{% url 'accounts:profile' %}"><span aria-hidden="true">◎</span> My Profile</a>
-        <a class="learner-nav__link learner-nav__link--external" href="{% url 'core:home' %}">Back to website <span aria-hidden="true">↗</span></a>
-      </nav>
-    </aside>
+<div class="lessons-layout">
+  <aside class="lessons-sidebar" aria-label="Learner navigation">
+    <p class="lessons-sidebar__label">Learn at your pace</p>
+    <nav class="lessons-sidebar__nav">
+      <a class="is-active" href="{% url 'core:learner_dashboard' %}" aria-current="page">Dashboard</a>
+      <a href="{% url 'core:lesson_list' %}">Lessons</a>
+      <a href="{% url 'core:phrasebook' %}">Phrasebook</a>
+      <span aria-disabled="true">Quizzes</span>
+      <a href="{% url 'accounts:profile' %}">My Profile</a>
+    </nav>
+    <p class="lessons-sidebar__quote">One small conversation<br>can open a new door.</p>
+    <a class="lessons-sidebar__back" href="{% url 'core:home' %}">Back to website <span aria-hidden="true">↗</span></a>
+  </aside>
 
-    <main class="learner-main" id="main-content">
-      <section class="learner-greeting" aria-labelledby="learner-greeting-title">
-        <div>
-          <p class="eyebrow">Your Cebuano journey</p>
-          <h1 id="learner-greeting-title">Maayong buntag, {{ request.user.first_name|default:request.user.username }}!</h1>
-          <p>Welcome aboard. Your goal: 10 minutes of Cebuano a day.</p>
+  <main class="lessons-main learner-dashboard-main" id="main-content">
+    {% if show_welcome_banner %}
+      <div class="learner-feedback-banner" role="status">
+        <p><span aria-hidden="true">✓</span> Your account is ready. Your first conversation is waiting.</p>
+      </div>
+    {% endif %}
+
+    <section class="learner-hero" aria-labelledby="learner-greeting-title">
+      <p class="lessons-eyebrow learner-hero__eyebrow">Your conversation trail</p>
+      <h1 id="learner-greeting-title">Maayong buntag, {{ request.user.first_name|default:request.user.username }}!</h1>
+      <p class="learner-hero__subtitle">Welcome aboard. Your goal: {{ daily_goal_target }} minutes of Cebuano a day.</p>
+      <div class="learner-indicators" aria-label="Streak and experience points">
+        <div class="learner-indicator learner-indicator--streak">
+          <span>{{ streak_days }}-day streak</span>
         </div>
-        <img src="{% static 'images/bito-flying-fish.png' %}" alt="Bito cheering you on" class="learner-greeting__bito" width="104" height="104" decoding="async">
-      </section>
+        <div class="learner-indicator learner-indicator--points">
+          <span><span aria-hidden="true">★</span> {{ xp_points }} XP</span>
+        </div>
+      </div>
+    </section>
 
-      <section class="learner-metrics" aria-label="Your progress">
-        <article class="learner-metric learner-metric--mint"><span class="learner-metric__icon" aria-hidden="true">✓</span><div><strong>0</strong><span>Lessons completed</span></div></article>
-        <article class="learner-metric learner-metric--peach"><span class="learner-metric__icon" aria-hidden="true">↗</span><div><strong>0-day streak</strong><span>Keep your practice going</span></div></article>
-        <article class="learner-metric learner-metric--yellow"><span class="learner-metric__icon" aria-hidden="true">★</span><div><strong>0 XP</strong><span>Experience points</span></div></article>
-      </section>
+    <section class="learner-trail-grid" aria-label="Learning trail and daily encouragement">
+      <div class="learner-trail-card">
+        <p class="learner-trail-card__eyebrow">{% if all_lessons_completed %}Trail complete{% elif completed_lesson_count %}Continue your trail{% else %}Your first little adventure{% endif %}</p>
+        <h2>{% if all_lessons_completed %}Every situation unlocked.{% elif completed_lesson_count %}Keep the conversation going.{% else %}Let’s start a conversation.{% endif %}</h2>
 
-      <section class="learner-content-grid" aria-label="Your next steps">
-        <div class="learner-path-card">
-          <p class="eyebrow">Your first little adventure</p>
-          <h2>Let’s start a conversation.</h2>
-          <p class="learner-path-intro">Start with a greeting, then build your confidence one useful phrase at a time.</p>
-          <a class="learner-step learner-step--current" href="{% url 'core:lesson_list' %}">
-            <span class="learner-step__number">→</span>
-            <span class="learner-step__copy"><strong>Say hello</strong><small>Start with a useful greeting</small></span>
-            <span class="learner-step__action">Explore <span aria-hidden="true">→</span></span>
-          </a>
-          <div class="learner-step learner-step--locked" aria-label="Ordering food, coming soon">
-            <span class="learner-step__number">01</span>
-            <span class="learner-step__copy"><strong>Ordering Food</strong><small>Coming up after your first lesson</small></span>
-            <span class="learner-step__lock" aria-hidden="true">⌑</span>
-          </div>
-          <div class="learner-step learner-step--locked" aria-label="Asking for directions, coming soon">
-            <span class="learner-step__number">02</span>
-            <span class="learner-step__copy"><strong>Asking for Directions</strong><small>Coming up in your learning path</small></span>
-            <span class="learner-step__lock" aria-hidden="true">⌑</span>
-          </div>
+        <div class="learner-trail-nodes">
+          {% for step in trail_steps %}
+            <a class="learner-node learner-node--{{ step.state }}" href="{% url 'core:lesson_detail' step.url %}">
+              <span class="learner-node__badge">{% if step.is_completed %}✓{% else %}{{ step.number }}{% endif %}</span>
+              <span class="learner-node__details">
+                <strong>{{ step.title }}</strong>
+                <small>{{ step.detail }}</small>
+              </span>
+            </a>
+            {% if not forloop.last %}
+              <div class="learner-node-connector{% if step.is_completed %} learner-node-connector--completed{% endif %}" aria-hidden="true"><span></span></div>
+            {% endif %}
+          {% empty %}
+            <p class="lessons-empty">New situational lessons will appear here as soon as they are published.</p>
+          {% endfor %}
         </div>
 
-        <aside class="learner-encouragement">
-          <div class="learner-encouragement__icon" aria-hidden="true">✦</div>
-          <p class="eyebrow">A little practice goes a long way</p>
-          <h2>Your pace is the right pace.</h2>
-          <p>Small, steady practice can make everyday conversations feel more familiar.</p>
-          <div class="learner-tip"><span aria-hidden="true">🐟</span><p><strong>Bito’s tip</strong>Try one phrase today. Ten minutes is a great start.</p></div>
-          <a href="{% url 'core:lesson_list' %}" class="learner-text-link">Explore situational lessons <span aria-hidden="true">→</span></a>
-        </aside>
-      </section>
-    </main>
-  </div>
+        {% if current_lesson %}
+          <a class="lessons-button lessons-button--primary learner-trail-card__cta" href="{% url 'core:lesson_detail' current_lesson.slug %}">{% if all_lessons_completed %}Review Lessons{% elif completed_lesson_count %}Continue Learning: {{ current_lesson.title }}{% else %}Start Learning: {{ current_lesson.title }}{% endif %} <span aria-hidden="true">→</span></a>
+        {% else %}
+          <a class="lessons-button lessons-button--primary learner-trail-card__cta" href="{% url 'core:lesson_list' %}">Start Learning <span aria-hidden="true">→</span></a>
+        {% endif %}
+      </div>
+
+      <aside class="learner-bito-card" aria-labelledby="bito-encouragement-heading">
+        <span class="learner-bito-card__art">
+          <img src="{% static 'images/figma-bito-tip.svg' %}" alt="Bito, your friendly Cebuano learning guide" width="241" height="187" decoding="async">
+        </span>
+        <h2 id="bito-encouragement-heading">{{ bito_heading }}</h2>
+        <p class="learner-bito-card__copy">{{ bito_copy }}</p>
+        <p class="learner-bito-card__goal">Today’s goal / {{ minutes_practiced_today }} of {{ daily_goal_target }} min</p>
+        <div class="learner-bito-card__progress" role="progressbar" aria-label="Today's {{ daily_goal_target }}-minute learning goal" aria-valuemin="0" aria-valuemax="{{ daily_goal_target }}" aria-valuenow="{{ minutes_practiced_today }}">
+          <span style="width: {{ daily_goal_percent }}%"></span>
+        </div>
+        <p class="learner-bito-card__upnext-label">Up next</p>
+        <h3 class="learner-bito-card__upnext-title"><a class="learner-bito-card__upnext-link" href="{{ up_next_url }}">{{ up_next_title }}</a></h3>
+        <p class="learner-bito-card__upnext-copy">{{ up_next_description }}</p>
+        <a class="lessons-button lessons-button--outline learner-bito-card__cta" href="{% url 'core:lesson_list' %}">Explore Lessons <span aria-hidden="true">→</span></a>
+      </aside>
+    </section>
+
+    <section class="learner-glance" aria-labelledby="learner-glance-heading">
+      <h2 id="learner-glance-heading">Look how far you’ve come.</h2>
+      <div class="learner-stats-grid">
+        <article class="learner-stat-card">
+          <p class="learner-stat-card__label">Lessons completed</p>
+          <p class="learner-stat-card__value">{{ completed_lesson_count }} / {{ total_lesson_target }}</p>
+          <p class="learner-stat-card__detail">{% if all_lessons_completed %}All beginner lessons complete!{% elif completed_lesson_count %}of {{ total_lesson_target }} beginner lessons{% else %}Your beginner learning path{% endif %}</p>
+        </article>
+        <article class="learner-stat-card">
+          <p class="learner-stat-card__label">Recent quiz score</p>
+          <p class="learner-stat-card__value">{% if recent_quiz_score is not None %}{{ recent_quiz_score }}%{% else %}—{% endif %}</p>
+          <p class="learner-stat-card__detail">{% if recent_quiz_score is not None %}Latest: {{ recent_quiz_lesson }}{% else %}Take your first checkpoint{% endif %}</p>
+        </article>
+        <article class="learner-stat-card">
+          <p class="learner-stat-card__label">Daily goal</p>
+          <p class="learner-stat-card__value">{{ minutes_practiced_today }} / {{ daily_goal_target }}</p>
+          <p class="learner-stat-card__detail">{% if minutes_practiced_today >= daily_goal_target %}Daily goal reached!{% else %}Minutes practiced today{% endif %}</p>
+        </article>
+        <article class="learner-stat-card">
+          <p class="learner-stat-card__label">Achievements</p>
+          <p class="learner-stat-card__value">{{ achievements_count }}</p>
+          <p class="learner-stat-card__detail">{% if latest_achievement %}Unlocked: {{ latest_achievement }}{% else %}Your first badge is waiting{% endif %}</p>
+        </article>
+      </div>
+    </section>
+  </main>
 </div>
 {% endblock %}

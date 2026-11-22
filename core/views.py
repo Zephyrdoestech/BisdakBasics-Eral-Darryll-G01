@@ -3,13 +3,15 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.admin.utils import NestedObjects
 from django.db import transaction
 from django.db.models.deletion import ProtectedError
-from django.db.models import Count, F, Prefetch, Q
+from django.db.models import Avg, Count, F, Prefetch, Q
 from django.core.exceptions import PermissionDenied
 from django.http import JsonResponse
 from django.core.paginator import Paginator
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_POST
+import re
 
 from accounts.models import User
 from .forms import (
@@ -45,11 +47,239 @@ def dashboard_redirect(request):
     return redirect("core:learner_dashboard")
 
 
+def _calculate_streak_days(activity_dates, today):
+    if not activity_dates:
+        return 0
+    if today in activity_dates:
+        cursor = today
+    elif (today - timezone.timedelta(days=1)) in activity_dates:
+        cursor = today - timezone.timedelta(days=1)
+    else:
+        return 0
+    streak = 0
+    while cursor in activity_dates:
+        streak += 1
+        cursor -= timezone.timedelta(days=1)
+    return streak
+
+
+def _extract_daily_goal_minutes(user):
+    profile = getattr(user, "profile", None)
+    if profile and profile.learning_goal:
+        match = re.search(r"(\d+)\s*(?:min|minute)", profile.learning_goal, re.IGNORECASE)
+        if match:
+            minutes = int(match.group(1))
+            if 1 <= minutes <= 180:
+                return minutes
+    return 10
+
+
 @login_required
 def learner_dashboard(request):
     if request.user.role != User.Role.LEARNER:
         raise PermissionDenied
-    return render(request, "core/learner_dashboard.html")
+
+    today = timezone.localdate()
+    published_lessons = list(
+        Lesson.objects.filter(is_published=True)
+        .select_related("category")
+        .annotate(phrase_count=Count("phrases"))
+        .only(
+            "id",
+            "title",
+            "slug",
+            "situation",
+            "summary",
+            "estimated_minutes",
+            "position",
+            "category__name",
+        )
+        .order_by("position", "id")
+    )
+
+    progress_records = list(
+        LessonProgress.objects.filter(
+            user=request.user,
+            lesson__is_published=True,
+            completed_at__isnull=False,
+        ).values_list("lesson_id", "completed_at")
+    )
+    completed_lesson_ids = {lesson_id for lesson_id, _ in progress_records}
+    completed_lesson_count = len(completed_lesson_ids)
+
+    practice_records = list(
+        PhrasePractice.objects.filter(user=request.user).values_list(
+            "phrase__lesson_id", "practice_count", "last_practiced_at"
+        )
+    )
+    practiced_count_by_lesson = {}
+    for lesson_id, _, _ in practice_records:
+        practiced_count_by_lesson[lesson_id] = (
+            practiced_count_by_lesson.get(lesson_id, 0) + 1
+        )
+
+    attempts = list(
+        LessonAttempt.objects.filter(user=request.user)
+        .select_related("lesson")
+        .only("score", "is_correct", "attempted_at", "lesson__title")
+        .order_by("-attempted_at")[:20]
+    )
+    latest_attempt = attempts[0] if attempts else None
+
+    activity_dates = set()
+    minutes_practiced_today = 0
+    lesson_minutes_by_id = {
+        lesson.id: lesson.estimated_minutes for lesson in published_lessons
+    }
+    completed_today_ids = set()
+    for lesson_id, completed_at in progress_records:
+        if completed_at:
+            completed_date = timezone.localtime(completed_at).date()
+            activity_dates.add(completed_date)
+            if completed_date == today:
+                completed_today_ids.add(lesson_id)
+                minutes_practiced_today += lesson_minutes_by_id.get(lesson_id, 5)
+
+    for lesson_id, _, practiced_at in practice_records:
+        if practiced_at:
+            practiced_date = timezone.localtime(practiced_at).date()
+            activity_dates.add(practiced_date)
+            if practiced_date == today and lesson_id not in completed_today_ids:
+                minutes_practiced_today += 2
+
+    for attempt in attempts:
+        if attempt.attempted_at:
+            activity_dates.add(timezone.localtime(attempt.attempted_at).date())
+
+    daily_goal_target = _extract_daily_goal_minutes(request.user)
+    daily_goal_percent = min(
+        100, round(minutes_practiced_today / daily_goal_target * 100)
+    )
+    streak_days = _calculate_streak_days(activity_dates, today)
+    xp_points = (completed_lesson_count * 20) + (len(practice_records) * 5)
+
+    milestones = []
+    if practice_records:
+        milestones.append("First Phrase Practiced")
+    if completed_lesson_count >= 1:
+        milestones.append("First Lesson Complete")
+    if any(a.is_correct for a in attempts):
+        milestones.append("Checkpoint Passed")
+    if minutes_practiced_today >= daily_goal_target:
+        milestones.append("Daily Goal Reached")
+    if published_lessons and completed_lesson_count >= len(published_lessons):
+        milestones.append("Trail Finisher")
+    achievements_count = len(milestones)
+    latest_achievement = milestones[-1] if milestones else ""
+
+    current_lesson = next(
+        (lesson for lesson in published_lessons if lesson.id not in completed_lesson_ids),
+        published_lessons[0] if published_lessons else None,
+    )
+
+    trail_steps = []
+    current_found = False
+    previous_title = ""
+    for index, lesson in enumerate(published_lessons, start=1):
+        is_completed = lesson.id in completed_lesson_ids
+        phrase_total = lesson.phrase_count or 5
+        practiced_in_lesson = practiced_count_by_lesson.get(lesson.id, 0)
+        if is_completed:
+            state = "completed"
+            detail = f"Completed · {phrase_total} phrases · +20 XP"
+        elif not current_found:
+            current_found = True
+            state = "current"
+            if practiced_in_lesson:
+                detail = f"In progress · {practiced_in_lesson}/{phrase_total} phrases practiced · +20 XP"
+            else:
+                prefix = "Next up" if completed_lesson_count else "Start here"
+                detail = f"{prefix} · {phrase_total} phrases · +20 XP"
+        else:
+            state = "locked"
+            if previous_title:
+                detail = f"Complete {previous_title} to unlock · {phrase_total} phrases"
+            else:
+                detail = lesson.summary
+        previous_title = lesson.title
+        trail_steps.append(
+            {
+                "number": f"{index:02d}",
+                "title": lesson.title,
+                "situation": lesson.situation,
+                "detail": detail,
+                "state": state,
+                "url": lesson.slug,
+                "is_completed": is_completed,
+            }
+        )
+
+    up_next_lesson = next(
+        (
+            lesson
+            for lesson in published_lessons
+            if lesson.id not in completed_lesson_ids
+            and (not current_lesson or lesson.id != current_lesson.id)
+        ),
+        None,
+    )
+    if up_next_lesson:
+        up_next_title = up_next_lesson.title
+        up_next_description = (
+            f"{up_next_lesson.summary} Unlock it after {current_lesson.title}."
+            if current_lesson
+            else up_next_lesson.summary
+        )
+        up_next_url = reverse("core:lesson_detail", kwargs={"slug": up_next_lesson.slug})
+    elif current_lesson and current_lesson.id not in completed_lesson_ids:
+        up_next_title = current_lesson.title
+        up_next_description = current_lesson.summary
+        up_next_url = reverse("core:lesson_detail", kwargs={"slug": current_lesson.slug})
+    else:
+        up_next_title = "Explore the Phrasebook"
+        up_next_description = "You completed every lesson in the trail! Review phrases or request a new one."
+        up_next_url = reverse("core:phrasebook")
+
+    if minutes_practiced_today >= daily_goal_target:
+        bito_heading = "You hit today’s goal!"
+        bito_copy = "Maayo kaayo! Keep practicing at your own pace or review your favorite phrases."
+    elif completed_lesson_count > 0 or practice_records:
+        bito_heading = "Small steps add up fast."
+        bito_copy = "You’re building real Cebuano confidence. Pick up your next phrase whenever you’re ready."
+    else:
+        bito_heading = "Every expert starts with hello."
+        bito_copy = "I’m Bito, your friendly guide. Listen first, try it aloud, and don’t worry about getting it perfect."
+
+    total_lesson_target = len(published_lessons)
+
+    return render(
+        request,
+        "core/learner_dashboard.html",
+        {
+            "completed_lesson_count": completed_lesson_count,
+            "total_lesson_target": total_lesson_target,
+            "all_lessons_completed": bool(
+                published_lessons and completed_lesson_count >= len(published_lessons)
+            ),
+            "streak_days": streak_days,
+            "xp_points": xp_points,
+            "minutes_practiced_today": minutes_practiced_today,
+            "daily_goal_target": daily_goal_target,
+            "daily_goal_percent": daily_goal_percent,
+            "recent_quiz_score": latest_attempt.score if latest_attempt else None,
+            "recent_quiz_lesson": latest_attempt.lesson.title if latest_attempt else "",
+            "achievements_count": achievements_count,
+            "latest_achievement": latest_achievement,
+            "trail_steps": trail_steps,
+            "current_lesson": current_lesson,
+            "up_next_title": up_next_title,
+            "up_next_description": up_next_description,
+            "up_next_url": up_next_url,
+            "bito_heading": bito_heading,
+            "bito_copy": bito_copy,
+            "show_welcome_banner": completed_lesson_count == 0 and not practice_records,
+        },
+    )
 
 
 @login_required
@@ -57,10 +287,22 @@ def admin_dashboard(request):
     if request.user.role != User.Role.ADMIN:
         raise PermissionDenied
     learner_count = User.objects.filter(role=User.Role.LEARNER).count()
+    lesson_completion_count = LessonProgress.objects.filter(
+        completed_at__isnull=False
+    ).count()
+    avg_score = LessonAttempt.objects.aggregate(avg=Avg("score"))["avg"]
+    pending_requests_count = PhraseRequest.objects.filter(
+        status=PhraseRequest.Status.PENDING
+    ).count()
     return render(
         request,
         "core/admin_dashboard.html",
-        {"learner_count": learner_count},
+        {
+            "learner_count": learner_count,
+            "lesson_completion_count": lesson_completion_count,
+            "quiz_average_score": round(avg_score) if avg_score is not None else None,
+            "pending_requests_count": pending_requests_count,
+        },
     )
 
 
@@ -145,9 +387,32 @@ def lesson_detail(request, slug):
     for display_position, phrase in enumerate(phrases, start=1):
         phrase.display_position = display_position
         phrase.is_practiced = phrase.pk in practiced_ids
-    current_phrase = next(
-        (phrase for phrase in phrases if not phrase.is_practiced),
-        phrases[0] if phrases else None,
+    requested_phrase_id = request.GET.get("phrase")
+    current_phrase = None
+    if requested_phrase_id and requested_phrase_id.isdigit():
+        target_id = int(requested_phrase_id)
+        current_phrase = next((p for p in phrases if p.pk == target_id), None)
+    if current_phrase is None:
+        current_phrase = next(
+            (phrase for phrase in phrases if not phrase.is_practiced),
+            phrases[0] if phrases else None,
+        )
+    next_phrase = None
+    if current_phrase and phrases:
+        current_idx = next(
+            (i for i, p in enumerate(phrases) if p.pk == current_phrase.pk), 0
+        )
+        next_phrase = next(
+            (p for p in phrases[current_idx + 1 :] if not p.is_practiced),
+            phrases[(current_idx + 1) % len(phrases)] if len(phrases) > 1 else None,
+        )
+    next_lesson = (
+        Lesson.objects.filter(is_published=True)
+        .exclude(pk=lesson.pk)
+        .filter(Q(position__gt=lesson.position) | Q(position=lesson.position, pk__gt=lesson.pk))
+        .order_by("position", "pk")
+        .only("title", "slug")
+        .first()
     )
     progress = LessonProgress.objects.filter(user=request.user, lesson=lesson).first()
     completed_count = len(practiced_ids)
@@ -160,6 +425,8 @@ def lesson_detail(request, slug):
             "lesson": lesson,
             "phrases": phrases,
             "current_phrase": current_phrase,
+            "next_phrase": next_phrase,
+            "next_lesson": next_lesson,
             "practiced_count": completed_count,
             "phrase_count": phrase_count,
             "practice_percent": practice_percent,

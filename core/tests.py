@@ -1,8 +1,10 @@
+import datetime
 from unittest.mock import patch
 
 from django.test import SimpleTestCase, override_settings
 
 from .storage import SupabaseAudioStorage
+from .views import _calculate_streak_days
 
 
 class StaticAssetURLTests(SimpleTestCase):
@@ -11,6 +13,23 @@ class StaticAssetURLTests(SimpleTestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'href="/static/')
+
+
+class LearnerDashboardStreakTests(SimpleTestCase):
+    def test_calculate_streak_days_counts_consecutive_days(self):
+        today = datetime.date(2026, 11, 22)
+        dates = {
+            datetime.date(2026, 11, 22),
+            datetime.date(2026, 11, 21),
+            datetime.date(2026, 11, 20),
+            datetime.date(2026, 11, 18),
+        }
+        self.assertEqual(_calculate_streak_days(dates, today), 3)
+
+    def test_calculate_streak_days_returns_zero_when_broken(self):
+        today = datetime.date(2026, 11, 22)
+        dates = {datetime.date(2026, 11, 19)}
+        self.assertEqual(_calculate_streak_days(dates, today), 0)
 
 
 class SupabaseAudioStorageTests(SimpleTestCase):

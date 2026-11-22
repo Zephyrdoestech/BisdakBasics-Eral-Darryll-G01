@@ -19,8 +19,13 @@
       <p class="eyebrow">Learn at your pace</p>
       <nav class="profile-nav">
         <a class="profile-nav__link" href="{% url 'core:dashboard_redirect' %}">Dashboard</a>
-        <span class="profile-nav__link profile-nav__link--disabled" aria-disabled="true">Lessons <small>Coming soon</small></span>
-        <span class="profile-nav__link profile-nav__link--disabled" aria-disabled="true">Phrasebook <small>Coming soon</small></span>
+        {% if request.user.role == "LEARNER" %}
+          <a class="profile-nav__link" href="{% url 'core:lesson_list' %}">Lessons</a>
+          <a class="profile-nav__link" href="{% url 'core:phrasebook' %}">Phrasebook</a>
+        {% else %}
+          <a class="profile-nav__link" href="{% url 'core:admin_lesson_list' %}">Lessons</a>
+          <a class="profile-nav__link" href="{% url 'core:admin_phrase_list' %}">Phrasebook</a>
+        {% endif %}
         <span class="profile-nav__link profile-nav__link--disabled" aria-disabled="true">Quizzes <small>Coming soon</small></span>
         <a class="profile-nav__link profile-nav__link--active" href="{% url 'accounts:profile' %}" aria-current="page">My Profile</a>
       </nav>
@@ -73,11 +78,28 @@
 
       <section class="profile-card profile-story" aria-labelledby="learning-story-heading">
         <h2 id="learning-story-heading">Your learning story</h2>
-        <p class="profile-story__label">Learning progress · Updates as lessons become available</p>
-        <div class="profile-story__empty">
-          <span class="profile-story__star" aria-hidden="true">✦</span>
-          <p>Your practice milestones will appear here as you learn.</p>
-        </div>
+        <p class="profile-story__label">Learning progress · {{ completed_lesson_count }} lesson{{ completed_lesson_count|pluralize }} completed · {{ practiced_phrase_count }} phrase{{ practiced_phrase_count|pluralize }} practiced · {{ xp_points }} XP</p>
+        {% if completed_lessons or practiced_phrase_count or latest_attempt %}
+          <dl class="profile-summary__details" style="margin-top: 14px;">
+            {% for record in completed_lessons %}
+              <div>
+                <dt>Completed {{ record.completed_at|date:"M j, Y" }}</dt>
+                <dd><a href="{% url 'core:lesson_detail' record.lesson.slug %}">{{ record.lesson.title }}</a> (+20 XP)</dd>
+              </div>
+            {% endfor %}
+            {% if latest_attempt %}
+              <div>
+                <dt>Latest checkpoint ({{ latest_attempt.lesson.title }})</dt>
+                <dd>{{ latest_attempt.score }}% · {% if latest_attempt.is_correct %}Passed{% else %}Needs review{% endif %}</dd>
+              </div>
+            {% endif %}
+          </dl>
+        {% else %}
+          <div class="profile-story__empty">
+            <span class="profile-story__star" aria-hidden="true">✦</span>
+            <p>Your practice milestones will appear here as you learn.</p>
+          </div>
+        {% endif %}
       </section>
     </main>
   </div>

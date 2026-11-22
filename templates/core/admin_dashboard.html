@@ -25,9 +25,9 @@
     </section>
     <section class="admin-stats" aria-label="System overview">
       <article class="admin-stat"><span class="eyebrow">Registered learners</span><strong>{{ learner_count }}</strong><span>Accounts with the learner role</span></article>
-      <article class="admin-stat"><span class="eyebrow">Lesson completion</span><strong>—</strong><span>Progress tracking is coming soon</span></article>
-      <article class="admin-stat"><span class="eyebrow">Quiz performance</span><strong>—</strong><span>Assessments are coming soon</span></article>
-      <article class="admin-stat"><span class="eyebrow">Requests to review</span><strong>—</strong><span>Community requests are coming soon</span></article>
+      <article class="admin-stat"><span class="eyebrow">Lesson completion</span><strong>{{ lesson_completion_count }}</strong><span>Completed lesson records</span></article>
+      <article class="admin-stat"><span class="eyebrow">Quiz performance</span><strong>{% if quiz_average_score is not None %}{{ quiz_average_score }}%{% else %}—{% endif %}</strong><span>Average checkpoint score</span></article>
+      <article class="admin-stat"><span class="eyebrow">Requests to review</span><strong>{{ pending_requests_count }}</strong><span>Pending community phrase requests</span></article>
     </section>
     <section class="dashboard-panel admin-empty">
       <div>

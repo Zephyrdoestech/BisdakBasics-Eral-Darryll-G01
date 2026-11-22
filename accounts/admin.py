@@ -25,4 +25,5 @@ class UserAdmin(DjangoUserAdmin):
 @admin.register(Profile)
 class ProfileAdmin(admin.ModelAdmin):
     list_display = ("user", "contact_number", "updated_at")
+    list_select_related = ("user",)
     search_fields = ("user__username", "user__email", "contact_number")

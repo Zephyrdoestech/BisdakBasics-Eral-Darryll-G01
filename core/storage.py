@@ -80,13 +80,23 @@ class SupabaseAudioStorage(Storage):
         return ContentFile(data)
 
     def delete(self, name):
+        if not name:
+            return
+        self.delete_many([name])
+
+    def delete_many(self, names):
+        valid_names = [name for name in names if name]
+        if not valid_names:
+            return
         if self.local:
-            return self.local.delete(name)
+            for name in valid_names:
+                self.local.delete(name)
+            return
         _, _, bucket = self._configuration()
         self._request(
             "DELETE",
             f"object/{quote(bucket, safe='')}",
-            body=json.dumps({"prefixes": [name]}).encode("utf-8"),
+            body=json.dumps({"prefixes": valid_names}).encode("utf-8"),
         )
 
     def exists(self, name):

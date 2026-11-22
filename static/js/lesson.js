@@ -1,22 +1,27 @@
-document.querySelectorAll("[data-play-audio]").forEach((button) => {
-  button.addEventListener("click", async () => {
-    const audio = document.getElementById(button.dataset.playAudio);
-    const status = document.querySelector("[data-audio-status]");
-    if (!audio) return;
+let activeAudio = null;
 
-    document.querySelectorAll("audio[data-native-reference]").forEach((item) => {
-      if (item !== audio) item.pause();
-    });
-    try {
-      await audio.play();
-      if (status) status.textContent = "Playing native-speaker audio.";
-      audio.addEventListener("ended", () => {
-        if (status) status.textContent = "Audio finished. Listen again or try saying the phrase.";
-      }, { once: true });
-    } catch {
-      if (status) status.textContent = "Audio could not be played. Please try again.";
-    }
-  });
+document.addEventListener("click", async (event) => {
+  const button = event.target.closest("[data-play-audio]");
+  if (!button) return;
+
+  const audio = document.getElementById(button.dataset.playAudio);
+  const status = document.querySelector("[data-audio-status]");
+  if (!audio) return;
+
+  if (activeAudio && activeAudio !== audio) {
+    activeAudio.pause();
+  }
+  activeAudio = audio;
+
+  try {
+    await audio.play();
+    if (status) status.textContent = "Playing native-speaker audio.";
+    audio.addEventListener("ended", () => {
+      if (status) status.textContent = "Audio finished. Listen again or try saying the phrase.";
+    }, { once: true });
+  } catch {
+    if (status) status.textContent = "Audio could not be played. Please try again.";
+  }
 });
 
 const recordingPanel = document.querySelector("[data-recording-panel]");

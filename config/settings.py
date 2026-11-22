@@ -28,6 +28,7 @@ if not DATABASE_URL.startswith(("postgres://", "postgresql://")):
 
 DATABASES = {"default": env.db("DATABASE_URL")}
 DATABASES["default"]["CONN_MAX_AGE"] = env.int("DB_CONN_MAX_AGE", default=60)
+DATABASES["default"]["CONN_HEALTH_CHECKS"] = True
 
 SUPABASE_URL = env("SUPABASE_URL", default="")
 SUPABASE_SERVICE_ROLE_KEY = env("SUPABASE_SERVICE_ROLE_KEY", default="")

@@ -69,7 +69,7 @@
           {% endfor %}
         </div>
         <aside class="lessons-tip">
-          <span class="lessons-tip__art"><img src="{% static 'images/figma-bito-tip.svg' %}" alt=""></span>
+          <span class="lessons-tip__art"><img src="{% static 'images/figma-bito-tip.svg' %}" alt="" loading="lazy" decoding="async"></span>
           <div class="lessons-tip__copy">
             <h2>Not quite ready for the next step?</h2>
             <p>Keep useful phrases close. Listening again is learning, too.</p>
@@ -78,7 +78,7 @@
         </aside>
       {% else %}
         <section class="lessons-empty-state">
-          <span class="lessons-tip__art"><img src="{% static 'images/figma-bito-tip.svg' %}" alt=""></span>
+          <span class="lessons-tip__art"><img src="{% static 'images/figma-bito-tip.svg' %}" alt="" loading="lazy" decoding="async"></span>
           <div><h2>Your first lesson is on its way.</h2><p>New situational lessons will appear here when they are published.</p></div>
         </section>
       {% endif %}

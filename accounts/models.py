@@ -21,6 +21,7 @@ class User(AbstractUser):
         max_length=10,
         choices=Role.choices,
         default=Role.LEARNER,
+        db_index=True,
     )
 
     objects = AccountUserManager()

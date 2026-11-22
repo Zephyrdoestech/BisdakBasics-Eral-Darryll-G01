@@ -71,13 +71,24 @@ class Lesson(models.Model):
 
     class Meta:
         ordering = ["category__name", "position", "title"]
+        indexes = [
+            models.Index(
+                fields=["is_published", "category", "position"],
+                name="core_lesson_pub_cat_pos_idx",
+            ),
+        ]
 
     def save(self, *args, **kwargs):
         if not self.slug:
             base_slug = slugify(self.title) or "lesson"
+            existing_slugs = set(
+                Lesson.objects.exclude(pk=self.pk)
+                .filter(slug__startswith=base_slug)
+                .values_list("slug", flat=True)
+            )
             candidate = base_slug
             suffix = 2
-            while Lesson.objects.exclude(pk=self.pk).filter(slug=candidate).exists():
+            while candidate in existing_slugs:
                 candidate = f"{base_slug}-{suffix}"
                 suffix += 1
             self.slug = candidate
@@ -152,6 +163,12 @@ class LessonAttempt(models.Model):
 
     class Meta:
         ordering = ["-attempted_at"]
+        indexes = [
+            models.Index(
+                fields=["user", "lesson", "-attempted_at"],
+                name="core_attempt_user_les_at_idx",
+            ),
+        ]
 
 
 class PhraseCategory(models.Model):
@@ -197,6 +214,12 @@ class Phrase(models.Model):
 
     class Meta:
         ordering = ["category__name", "cebuano_text"]
+        indexes = [
+            models.Index(
+                fields=["is_published", "category"],
+                name="core_phrase_pub_cat_idx",
+            ),
+        ]
 
     def __str__(self):
         return f"{self.cebuano_text} — {self.english_translation}"
@@ -246,6 +269,16 @@ class PhraseRequest(models.Model):
 
     class Meta:
         ordering = ["status", "-created_at"]
+        indexes = [
+            models.Index(
+                fields=["status", "-created_at"],
+                name="core_phrasereq_stat_cat_idx",
+            ),
+            models.Index(
+                fields=["submitted_by", "status"],
+                name="core_phrasereq_user_stat_idx",
+            ),
+        ]
 
     def __str__(self):
         return f"{self.requested_phrase} — {self.get_status_display()}"

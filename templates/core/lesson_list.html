@@ -5,7 +5,7 @@
 {% block content %}
 <header class="lessons-header">
   <a class="lessons-brand" href="{% url 'core:learner_dashboard' %}">
-    <span class="lessons-brand__mark"><img src="{% static 'images/figma-bito-header.svg' %}" alt=""></span>
+    <span class="lessons-brand__mark"><img src="{% static 'images/figma-bito-header.svg' %}" alt="" width="53" height="41" decoding="async"></span>
     <span>Bisdak Basics</span>
   </a>
   <p class="lessons-header__tagline">Your everyday Cebuano</p>
@@ -62,14 +62,14 @@
             <article class="lessons-topic-card lessons-topic-card--{{ card_color }}">
               <p class="lessons-topic-card__eyebrow">{{ forloop.counter|stringformat:"02d" }} / SITUATION</p>
               <h2>{{ category.name }}</h2>
-              <p class="lessons-topic-card__description">{% if category.description %}{{ category.description }}{% elif category.published_lessons %}{{ category.published_lessons.0.summary }}{% else %}Explore practical Cebuano lessons for this situation.{% endif %}</p>
+              <p class="lessons-topic-card__description">{{ category.display_description|default:"Explore practical Cebuano lessons for this situation." }}</p>
               <p class="lessons-topic-card__meta">{{ category.published_count }} lesson{{ category.published_count|pluralize }} available</p>
               <a class="lessons-button lessons-button--primary" href="?category={{ category.slug }}">Explore lessons <span aria-hidden="true">→</span></a>
             </article>
           {% endfor %}
         </div>
         <aside class="lessons-tip">
-          <span class="lessons-tip__art"><img src="{% static 'images/figma-bito-tip.svg' %}" alt="" loading="lazy" decoding="async"></span>
+          <span class="lessons-tip__art"><img src="{% static 'images/figma-bito-tip.svg' %}" alt="" width="132" height="102" loading="lazy" decoding="async"></span>
           <div class="lessons-tip__copy">
             <h2>Not quite ready for the next step?</h2>
             <p>Keep useful phrases close. Listening again is learning, too.</p>
@@ -78,7 +78,7 @@
         </aside>
       {% else %}
         <section class="lessons-empty-state">
-          <span class="lessons-tip__art"><img src="{% static 'images/figma-bito-tip.svg' %}" alt="" loading="lazy" decoding="async"></span>
+          <span class="lessons-tip__art"><img src="{% static 'images/figma-bito-tip.svg' %}" alt="" width="132" height="102" loading="lazy" decoding="async"></span>
           <div><h2>Your first lesson is on its way.</h2><p>New situational lessons will appear here when they are published.</p></div>
         </section>
       {% endif %}

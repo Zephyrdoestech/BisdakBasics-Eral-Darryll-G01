@@ -1,19 +1,19 @@
+import re
+
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.contrib.admin.utils import NestedObjects
-from django.db import transaction
-from django.db.models.deletion import ProtectedError
-from django.db.models import Avg, Count, F, Prefetch, Q
 from django.core.exceptions import PermissionDenied
-from django.http import JsonResponse
 from django.core.paginator import Paginator
+from django.db import IntegrityError, transaction
+from django.db.models import Avg, Case, Count, Exists, F, OuterRef, Q, Subquery, When
+from django.db.models.deletion import ProtectedError
+from django.http import Http404, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_POST
-import re
 
-from accounts.models import User
+from accounts.models import Profile, User
 from .forms import (
     LessonForm,
     LessonPhraseFormSet,
@@ -63,15 +63,44 @@ def _calculate_streak_days(activity_dates, today):
     return streak
 
 
+_DAILY_GOAL_RE = re.compile(r"(\d+)\s*(?:min|minute)", re.IGNORECASE)
+
+
 def _extract_daily_goal_minutes(user):
-    profile = getattr(user, "profile", None)
-    if profile and profile.learning_goal:
-        match = re.search(r"(\d+)\s*(?:min|minute)", profile.learning_goal, re.IGNORECASE)
+    if hasattr(user, "_state"):
+        cached_profile = user._state.fields_cache.get("profile")
+        if cached_profile is not None:
+            learning_goal = cached_profile.learning_goal
+        elif user.pk is not None:
+            learning_goal = (
+                Profile.objects.filter(user_id=user.pk)
+                .values_list("learning_goal", flat=True)
+                .first()
+            )
+        else:
+            learning_goal = ""
+    else:
+        profile = getattr(user, "profile", None)
+        learning_goal = profile.learning_goal if profile else ""
+
+    if learning_goal:
+        match = _DAILY_GOAL_RE.search(learning_goal)
         if match:
             minutes = int(match.group(1))
             if 1 <= minutes <= 180:
                 return minutes
     return 10
+
+
+def _delete_audio_files(storage, names):
+    valid_names = [name for name in names if name]
+    if not valid_names:
+        return
+    if hasattr(storage, "delete_many"):
+        storage.delete_many(valid_names)
+    else:
+        for audio_name in valid_names:
+            storage.delete(audio_name)
 
 
 @login_required
@@ -82,7 +111,6 @@ def learner_dashboard(request):
     today = timezone.localdate()
     published_lessons = list(
         Lesson.objects.filter(is_published=True)
-        .select_related("category")
         .annotate(phrase_count=Count("phrases"))
         .only(
             "id",
@@ -92,37 +120,35 @@ def learner_dashboard(request):
             "summary",
             "estimated_minutes",
             "position",
-            "category__name",
         )
         .order_by("position", "id")
     )
+    published_lesson_ids = [lesson.id for lesson in published_lessons]
 
-    progress_records = list(
-        LessonProgress.objects.filter(
-            user=request.user,
-            lesson__is_published=True,
-            completed_at__isnull=False,
-        ).values_list("lesson_id", "completed_at")
+    progress_records = (
+        list(
+            LessonProgress.objects.filter(
+                user=request.user,
+                lesson_id__in=published_lesson_ids,
+                completed_at__isnull=False,
+            ).values_list("lesson_id", "completed_at")
+        )
+        if published_lesson_ids
+        else []
     )
     completed_lesson_ids = {lesson_id for lesson_id, _ in progress_records}
     completed_lesson_count = len(completed_lesson_ids)
 
     practice_records = list(
         PhrasePractice.objects.filter(user=request.user).values_list(
-            "phrase__lesson_id", "practice_count", "last_practiced_at"
+            "phrase__lesson_id", "last_practiced_at"
         )
     )
-    practiced_count_by_lesson = {}
-    for lesson_id, _, _ in practice_records:
-        practiced_count_by_lesson[lesson_id] = (
-            practiced_count_by_lesson.get(lesson_id, 0) + 1
-        )
 
     attempts = list(
         LessonAttempt.objects.filter(user=request.user)
-        .select_related("lesson")
-        .only("score", "is_correct", "attempted_at", "lesson__title")
-        .order_by("-attempted_at")[:20]
+        .order_by("-attempted_at")
+        .values_list("score", "is_correct", "attempted_at", "lesson__title")[:20]
     )
     latest_attempt = attempts[0] if attempts else None
 
@@ -140,16 +166,20 @@ def learner_dashboard(request):
                 completed_today_ids.add(lesson_id)
                 minutes_practiced_today += lesson_minutes_by_id.get(lesson_id, 5)
 
-    for lesson_id, _, practiced_at in practice_records:
+    practiced_count_by_lesson = {}
+    for lesson_id, practiced_at in practice_records:
+        practiced_count_by_lesson[lesson_id] = (
+            practiced_count_by_lesson.get(lesson_id, 0) + 1
+        )
         if practiced_at:
             practiced_date = timezone.localtime(practiced_at).date()
             activity_dates.add(practiced_date)
             if practiced_date == today and lesson_id not in completed_today_ids:
                 minutes_practiced_today += 2
 
-    for attempt in attempts:
-        if attempt.attempted_at:
-            activity_dates.add(timezone.localtime(attempt.attempted_at).date())
+    for _, _, attempted_at, _ in attempts:
+        if attempted_at:
+            activity_dates.add(timezone.localtime(attempted_at).date())
 
     daily_goal_target = _extract_daily_goal_minutes(request.user)
     daily_goal_percent = min(
@@ -163,7 +193,7 @@ def learner_dashboard(request):
         milestones.append("First Phrase Practiced")
     if completed_lesson_count >= 1:
         milestones.append("First Lesson Complete")
-    if any(a.is_correct for a in attempts):
+    if any(is_correct for _, is_correct, _, _ in attempts):
         milestones.append("Checkpoint Passed")
     if minutes_practiced_today >= daily_goal_target:
         milestones.append("Daily Goal Reached")
@@ -266,8 +296,8 @@ def learner_dashboard(request):
             "minutes_practiced_today": minutes_practiced_today,
             "daily_goal_target": daily_goal_target,
             "daily_goal_percent": daily_goal_percent,
-            "recent_quiz_score": latest_attempt.score if latest_attempt else None,
-            "recent_quiz_lesson": latest_attempt.lesson.title if latest_attempt else "",
+            "recent_quiz_score": latest_attempt[0] if latest_attempt else None,
+            "recent_quiz_lesson": latest_attempt[3] if latest_attempt else "",
             "achievements_count": achievements_count,
             "latest_achievement": latest_achievement,
             "trail_steps": trail_steps,
@@ -314,34 +344,41 @@ def _require_role(request, role):
 @login_required
 def lesson_list(request):
     _require_role(request, User.Role.LEARNER)
-    categories_qs = LessonCategory.objects.annotate(
-        published_count=Count("lessons", filter=Q(lessons__is_published=True))
-    ).filter(published_count__gt=0)
     category = None
     lessons = Lesson.objects.none()
     category_slug = request.GET.get("category", "")
     if category_slug:
-        category = get_object_or_404(categories_qs, slug=category_slug)
+        category = get_object_or_404(
+            LessonCategory.objects.filter(
+                Exists(
+                    Lesson.objects.filter(category_id=OuterRef("pk"), is_published=True)
+                )
+            ),
+            slug=category_slug,
+        )
         lessons = (
             Lesson.objects.filter(is_published=True, category=category)
-            .select_related("category")
-            .defer("cebuano_text", "english_translation", "notes", "learning_objectives")
+            .only("id", "title", "slug", "situation", "summary", "position")
+            .order_by("position", "title")
         )
-        categories = categories_qs
+        categories = []
         published_lesson_count = 0
         completed_lesson_count = 0
         lesson_progress_percent = 0
     else:
+        first_lesson_summary = Subquery(
+            Lesson.objects.filter(is_published=True, category=OuterRef("pk"))
+            .order_by("position", "title")
+            .values("summary")[:1]
+        )
         categories = list(
-            categories_qs.prefetch_related(
-                Prefetch(
-                    "lessons",
-                    queryset=Lesson.objects.filter(is_published=True)
-                    .only("id", "category_id", "summary", "position", "title")
-                    .order_by("position", "title"),
-                    to_attr="published_lessons",
-                )
-            )
+            LessonCategory.objects.annotate(
+                published_count=Count("lessons", filter=Q(lessons__is_published=True)),
+                display_description=Case(
+                    When(description="", then=first_lesson_summary),
+                    default="description",
+                ),
+            ).filter(published_count__gt=0)
         )
         published_lesson_count = sum(c.published_count for c in categories)
         completed_lesson_count = (
@@ -378,15 +415,20 @@ def lesson_detail(request, slug):
     lesson = get_object_or_404(
         Lesson.objects.select_related("category"), slug=slug, is_published=True
     )
-    phrases = list(lesson.phrases.all())
-    practiced_ids = set(
-        PhrasePractice.objects.filter(
-            user=request.user, phrase__lesson=lesson
-        ).values_list("phrase_id", flat=True)
+    phrases = list(
+        lesson.phrases.annotate(
+            is_practiced=Exists(
+                PhrasePractice.objects.filter(
+                    user=request.user, phrase_id=OuterRef("pk")
+                )
+            )
+        )
     )
+    completed_count = 0
     for display_position, phrase in enumerate(phrases, start=1):
         phrase.display_position = display_position
-        phrase.is_practiced = phrase.pk in practiced_ids
+        if phrase.is_practiced:
+            completed_count += 1
     requested_phrase_id = request.GET.get("phrase")
     current_phrase = None
     if requested_phrase_id and requested_phrase_id.isdigit():
@@ -406,6 +448,11 @@ def lesson_detail(request, slug):
             (p for p in phrases[current_idx + 1 :] if not p.is_practiced),
             phrases[(current_idx + 1) % len(phrases)] if len(phrases) > 1 else None,
         )
+    progress = (
+        LessonProgress.objects.filter(user=request.user, lesson=lesson)
+        .only("completed_at")
+        .first()
+    )
     next_lesson = (
         Lesson.objects.filter(is_published=True)
         .exclude(pk=lesson.pk)
@@ -413,9 +460,16 @@ def lesson_detail(request, slug):
         .order_by("position", "pk")
         .only("title", "slug")
         .first()
+        if progress and progress.completed_at
+        else None
     )
-    progress = LessonProgress.objects.filter(user=request.user, lesson=lesson).first()
-    completed_count = len(practiced_ids)
+    last_attempt = (
+        LessonAttempt.objects.filter(user=request.user, lesson=lesson)
+        .only("selected_answer", "score", "is_correct")
+        .first()
+        if lesson.checkpoint_question
+        else None
+    )
     phrase_count = len(phrases)
     practice_percent = round(completed_count / phrase_count * 100) if phrase_count else 0
     return render(
@@ -431,9 +485,7 @@ def lesson_detail(request, slug):
             "phrase_count": phrase_count,
             "practice_percent": practice_percent,
             "progress": progress,
-            "last_attempt": LessonAttempt.objects.filter(
-                user=request.user, lesson=lesson
-            ).first(),
+            "last_attempt": last_attempt,
         },
     )
 
@@ -448,21 +500,38 @@ def record_phrase_practice(request, slug, phrase_id):
         lesson__slug=slug,
         lesson__is_published=True,
     )
-    practice, created = PhrasePractice.objects.get_or_create(
-        user=request.user, phrase=phrase, defaults={"practice_count": 1}
+    now = timezone.now()
+    updated = PhrasePractice.objects.filter(
+        user=request.user, phrase=phrase
+    ).update(
+        practice_count=F("practice_count") + 1,
+        last_practiced_at=now,
     )
-    if not created:
-        PhrasePractice.objects.filter(pk=practice.pk).update(
-            practice_count=F("practice_count") + 1,
-            last_practiced_at=timezone.now(),
+    if not updated:
+        try:
+            PhrasePractice.objects.create(
+                user=request.user, phrase=phrase, practice_count=1
+            )
+        except IntegrityError:
+            PhrasePractice.objects.filter(
+                user=request.user, phrase=phrase
+            ).update(
+                practice_count=F("practice_count") + 1,
+                last_practiced_at=now,
+            )
+    counts = (
+        LessonPhrase.objects.filter(lesson_id=phrase.lesson_id)
+        .annotate(
+            is_practiced=Exists(
+                PhrasePractice.objects.filter(
+                    user=request.user, phrase_id=OuterRef("pk")
+                )
+            )
         )
-    counts = LessonPhrase.objects.filter(lesson_id=phrase.lesson_id).aggregate(
-        phrase_count=Count("id", distinct=True),
-        practiced_count=Count(
-            "id",
-            filter=Q(practice_records__user=request.user),
-            distinct=True,
-        ),
+        .aggregate(
+            phrase_count=Count("id"),
+            practiced_count=Count("id", filter=Q(is_practiced=True)),
+        )
     )
     practiced_count = counts["practiced_count"]
     phrase_count = counts["phrase_count"]
@@ -481,26 +550,32 @@ def record_phrase_practice(request, slug, phrase_id):
 @require_POST
 def submit_lesson_checkpoint(request, slug):
     _require_role(request, User.Role.LEARNER)
-    lesson = get_object_or_404(Lesson, slug=slug, is_published=True)
+    lesson = get_object_or_404(
+        Lesson.objects.only("id", "slug", "checkpoint_question", "checkpoint_correct_answer"),
+        slug=slug,
+        is_published=True,
+    )
     selected_answer = request.POST.get("selected_answer", "")
     if selected_answer not in {"A", "B"} or not lesson.checkpoint_question:
         messages.error(request, "Choose an answer for this lesson checkpoint.")
         return redirect("core:lesson_detail", slug=lesson.slug)
 
     is_correct = selected_answer == lesson.checkpoint_correct_answer
-    LessonAttempt.objects.create(
-        user=request.user,
-        lesson=lesson,
-        selected_answer=selected_answer,
-        is_correct=is_correct,
-        score=100 if is_correct else 0,
-    )
-    if is_correct:
-        LessonProgress.objects.update_or_create(
+    with transaction.atomic():
+        LessonAttempt.objects.create(
             user=request.user,
             lesson=lesson,
-            defaults={"completed_at": timezone.now()},
+            selected_answer=selected_answer,
+            is_correct=is_correct,
+            score=100 if is_correct else 0,
         )
+        if is_correct:
+            LessonProgress.objects.update_or_create(
+                user=request.user,
+                lesson=lesson,
+                defaults={"completed_at": timezone.now()},
+            )
+    if is_correct:
         messages.success(request, "Correct! This lesson is now complete.")
     else:
         messages.error(request, "Not quite. Review the phrases and try again.")
@@ -511,7 +586,11 @@ def submit_lesson_checkpoint(request, slug):
 @require_POST
 def complete_lesson(request, slug):
     _require_role(request, User.Role.LEARNER)
-    lesson = get_object_or_404(Lesson, slug=slug, is_published=True)
+    lesson = get_object_or_404(
+        Lesson.objects.only("id", "slug", "checkpoint_question"),
+        slug=slug,
+        is_published=True,
+    )
     if lesson.checkpoint_question:
         messages.error(request, "Complete the lesson checkpoint to finish this lesson.")
     else:
@@ -530,18 +609,36 @@ def phrasebook(request):
     search_form = PhraseSearchForm(request.GET or None)
     query = search_form.cleaned_data.get("q", "") if search_form.is_valid() else ""
     category_slug = request.GET.get("category", "")
-    categories = (
+    categories = list(
         PhraseCategory.objects.annotate(
             published_count=Count("phrases", filter=Q(phrases__is_published=True))
         )
         .filter(published_count__gt=0)
+        .only("id", "name", "slug")
         .order_by("name")
     )
-    phrases = Phrase.objects.filter(is_published=True).select_related("category")
+    phrases = (
+        Phrase.objects.filter(is_published=True)
+        .select_related("category")
+        .only(
+            "id",
+            "cebuano_text",
+            "english_translation",
+            "situation",
+            "pronunciation_note",
+            "audio",
+            "category__name",
+        )
+    )
     active_category = None
     if category_slug:
-        active_category = get_object_or_404(categories, slug=category_slug)
-        phrases = phrases.filter(category=active_category)
+        active_category = next(
+            (category for category in categories if category.slug == category_slug),
+            None,
+        )
+        if active_category is None:
+            raise Http404("No PhraseCategory matches the given query.")
+        phrases = phrases.filter(category=active_category).order_by("cebuano_text")
     if query:
         phrases = phrases.filter(
             Q(cebuano_text__icontains=query)
@@ -586,8 +683,18 @@ def phrase_request_create(request):
 @login_required
 def phrase_requests(request):
     _require_role(request, User.Role.LEARNER)
-    requests = PhraseRequest.objects.filter(submitted_by=request.user).select_related(
-        "requested_category", "created_phrase"
+    requests = (
+        PhraseRequest.objects.filter(submitted_by=request.user)
+        .select_related("created_phrase")
+        .only(
+            "id",
+            "requested_phrase",
+            "situation",
+            "status",
+            "admin_note",
+            "created_at",
+            "created_phrase__english_translation",
+        )
     )
     return render(request, "core/phrase_requests.html", {"phrase_requests": requests})
 
@@ -595,7 +702,14 @@ def phrase_requests(request):
 @login_required
 def admin_phrase_list(request):
     _require_role(request, User.Role.ADMIN)
-    phrases = Phrase.objects.select_related("category", "created_by")
+    phrases = Phrase.objects.select_related("category").only(
+        "id",
+        "cebuano_text",
+        "english_translation",
+        "situation",
+        "is_published",
+        "category__name",
+    )
     return render(request, "core/admin_phrase_list.html", {"phrases": phrases})
 
 
@@ -621,7 +735,7 @@ def admin_phrase_update(request, phrase_id):
     if request.method == "POST" and form.is_valid():
         updated = form.save()
         if old_audio and updated.audio.name != old_audio:
-            phrase.audio.storage.delete(old_audio)
+            _delete_audio_files(phrase.audio.storage, [old_audio])
         messages.success(request, "Phrase updated successfully.")
         return redirect("core:admin_phrase_list")
     return render(
@@ -636,9 +750,10 @@ def admin_phrase_update(request, phrase_id):
 def admin_phrase_delete(request, phrase_id):
     _require_role(request, User.Role.ADMIN)
     phrase = get_object_or_404(Phrase, pk=phrase_id)
-    if phrase.audio:
-        phrase.audio.delete(save=False)
+    old_audio = phrase.audio.name
+    storage = phrase.audio.storage
     phrase.delete()
+    _delete_audio_files(storage, [old_audio])
     messages.success(request, "Phrase deleted successfully.")
     return redirect("core:admin_phrase_list")
 
@@ -705,8 +820,18 @@ def admin_phrase_requests(request):
     status = request.GET.get("status", PhraseRequest.Status.PENDING)
     if status not in PhraseRequest.Status.values:
         status = PhraseRequest.Status.PENDING
-    requests = PhraseRequest.objects.filter(status=status).select_related(
-        "submitted_by", "requested_category"
+    requests = (
+        PhraseRequest.objects.filter(status=status)
+        .select_related("submitted_by")
+        .only(
+            "id",
+            "requested_phrase",
+            "english_translation",
+            "situation",
+            "created_at",
+            "status",
+            "submitted_by__username",
+        )
     )
     return render(
         request,
@@ -718,7 +843,9 @@ def admin_phrase_requests(request):
 @login_required
 def admin_phrase_request_review(request, request_id):
     _require_role(request, User.Role.ADMIN)
-    phrase_request = get_object_or_404(PhraseRequest, pk=request_id)
+    phrase_request = get_object_or_404(
+        PhraseRequest.objects.select_related("submitted_by"), pk=request_id
+    )
     if phrase_request.status != PhraseRequest.Status.PENDING:
         messages.info(request, "This phrase request has already been reviewed.")
         return redirect("core:admin_phrase_requests")
@@ -758,7 +885,15 @@ def admin_phrase_request_review(request, request_id):
 @login_required
 def admin_lesson_list(request):
     _require_role(request, User.Role.ADMIN)
-    lessons = Lesson.objects.select_related("category", "created_by")
+    lessons = Lesson.objects.select_related("category").only(
+        "id",
+        "title",
+        "slug",
+        "situation",
+        "is_published",
+        "position",
+        "category__name",
+    )
     return render(request, "core/admin_lesson_list.html", {"lessons": lessons})
 
 
@@ -815,13 +950,7 @@ def admin_lesson_update(request, slug):
         audio_to_delete = list(phrase_audio_to_delete)
         if old_audio and updated.audio.name != old_audio:
             audio_to_delete.append(old_audio)
-        if audio_to_delete:
-            storage = lesson.audio.storage
-            if hasattr(storage, "delete_many"):
-                storage.delete_many(audio_to_delete)
-            else:
-                for audio_name in audio_to_delete:
-                    storage.delete(audio_name)
+        _delete_audio_files(lesson.audio.storage, audio_to_delete)
         messages.success(request, "Lesson updated successfully.")
         return redirect("core:admin_lesson_list")
     return render(
@@ -846,13 +975,8 @@ def admin_lesson_delete(request, slug):
     )
     if lesson.audio:
         audio_to_delete.append(lesson.audio.name)
+    storage = lesson.audio.storage
     lesson.delete()
-    if audio_to_delete:
-        storage = lesson.audio.storage
-        if hasattr(storage, "delete_many"):
-            storage.delete_many(audio_to_delete)
-        else:
-            for audio_name in audio_to_delete:
-                storage.delete(audio_name)
+    _delete_audio_files(storage, audio_to_delete)
     messages.success(request, "Lesson deleted successfully.")
     return redirect("core:admin_lesson_list")

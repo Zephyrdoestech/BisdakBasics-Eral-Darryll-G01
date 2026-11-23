@@ -10,6 +10,15 @@ from .models import (
 )
 
 
+MAX_AUDIO_FILE_BYTES = 15 * 1024 * 1024
+
+
+def _validate_audio_size(audio):
+    if audio and audio.size > MAX_AUDIO_FILE_BYTES:
+        raise forms.ValidationError("Audio files must be 15 MB or smaller.")
+    return audio
+
+
 class LessonForm(forms.ModelForm):
     class Meta:
         model = Lesson
@@ -55,10 +64,7 @@ class LessonForm(forms.ModelForm):
         return cleaned_data
 
     def clean_audio(self):
-        audio = self.cleaned_data.get("audio")
-        if audio and audio.size > 15 * 1024 * 1024:
-            raise forms.ValidationError("Audio files must be 15 MB or smaller.")
-        return audio
+        return _validate_audio_size(self.cleaned_data.get("audio"))
 
 
 class LessonPhraseForm(forms.ModelForm):
@@ -70,10 +76,7 @@ class LessonPhraseForm(forms.ModelForm):
         }
 
     def clean_audio(self):
-        audio = self.cleaned_data.get("audio")
-        if audio and audio.size > 15 * 1024 * 1024:
-            raise forms.ValidationError("Audio files must be 15 MB or smaller.")
-        return audio
+        return _validate_audio_size(self.cleaned_data.get("audio"))
 
 
 LessonPhraseFormSet = inlineformset_factory(
@@ -102,10 +105,7 @@ class PhraseForm(forms.ModelForm):
         widgets = {"pronunciation_note": forms.Textarea(attrs={"rows": 3})}
 
     def clean_audio(self):
-        audio = self.cleaned_data.get("audio")
-        if audio and audio.size > 15 * 1024 * 1024:
-            raise forms.ValidationError("Audio files must be 15 MB or smaller.")
-        return audio
+        return _validate_audio_size(self.cleaned_data.get("audio"))
 
 
 class PhraseCategoryForm(forms.ModelForm):
@@ -139,7 +139,7 @@ class PhraseRequestReviewForm(forms.Form):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields["category"].queryset = PhraseCategory.objects.all()
+        self.fields["category"].queryset = PhraseCategory.objects.only("id", "name")
 
     def clean(self):
         cleaned_data = super().clean()

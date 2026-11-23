@@ -1,11 +1,11 @@
 let activeAudio = null;
+const audioStatus = document.querySelector("[data-audio-status]");
 
 document.addEventListener("click", async (event) => {
   const button = event.target.closest("[data-play-audio]");
   if (!button) return;
 
   const audio = document.getElementById(button.dataset.playAudio);
-  const status = document.querySelector("[data-audio-status]");
   if (!audio) return;
 
   if (activeAudio && activeAudio !== audio) {
@@ -13,14 +13,15 @@ document.addEventListener("click", async (event) => {
   }
   activeAudio = audio;
 
+  audio.onended = () => {
+    if (audioStatus) audioStatus.textContent = "Audio finished. Listen again or try saying the phrase.";
+  };
+
   try {
     await audio.play();
-    if (status) status.textContent = "Playing native-speaker audio.";
-    audio.addEventListener("ended", () => {
-      if (status) status.textContent = "Audio finished. Listen again or try saying the phrase.";
-    }, { once: true });
+    if (audioStatus) audioStatus.textContent = "Playing native-speaker audio.";
   } catch {
-    if (status) status.textContent = "Audio could not be played. Please try again.";
+    if (audioStatus) audioStatus.textContent = "Audio could not be played. Please try again.";
   }
 });
 
@@ -32,6 +33,10 @@ if (recordingPanel) {
   const status = recordingPanel.querySelector("[data-record-status]");
   const playback = recordingPanel.querySelector("[data-recorded-audio]");
   const csrfInput = recordingPanel.querySelector("[name=csrfmiddlewaretoken]");
+  const practicedCountEl = document.getElementById("practiced-count");
+  const phraseCountEl = document.getElementById("phrase-count");
+  const practiceProgressEl = document.getElementById("practice-progress");
+  const progressBar = document.querySelector("[role=progressbar]");
   let mediaRecorder;
   let microphoneStream;
   let recordingUrl;
@@ -79,6 +84,10 @@ if (recordingPanel) {
 
   replayButton.addEventListener("click", async () => {
     if (!playback.src) return;
+    if (activeAudio && activeAudio !== playback) {
+      activeAudio.pause();
+    }
+    activeAudio = playback;
     try {
       await playback.play();
       status.textContent = "Playing your recording on this device.";
@@ -99,11 +108,10 @@ if (recordingPanel) {
       });
       if (!response.ok) throw new Error("Practice could not be saved");
       const result = await response.json();
-      document.getElementById("practiced-count").textContent = result.practiced_count;
-      document.getElementById("phrase-count").textContent = result.phrase_count;
-      document.getElementById("practice-progress").style.width = `${result.progress_percent}%`;
-      const progressBar = document.querySelector("[role=progressbar]");
-      progressBar.setAttribute("aria-valuenow", result.progress_percent);
+      if (practicedCountEl) practicedCountEl.textContent = result.practiced_count;
+      if (phraseCountEl) phraseCountEl.textContent = result.phrase_count;
+      if (practiceProgressEl) practiceProgressEl.style.width = `${result.progress_percent}%`;
+      if (progressBar) progressBar.setAttribute("aria-valuenow", result.progress_percent);
       status.textContent = "Practice progress saved. Your recording remains on this device only.";
     } catch {
       status.textContent = "Your recording is ready to replay, but practice progress could not be saved. Check your connection and record again.";

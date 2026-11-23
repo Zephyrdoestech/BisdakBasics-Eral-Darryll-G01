@@ -3,6 +3,7 @@ from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
 from django.core.exceptions import ValidationError
 from django.core.validators import RegexValidator
 from django.db.models import Q
+from django.db.models.functions import Lower
 
 from .models import User
 
@@ -42,23 +43,45 @@ class ProfileForm(forms.Form):
 
     def clean_email(self):
         email = self.cleaned_data["email"].strip().lower()
-        if User.objects.exclude(pk=self.user.pk).filter(
-            Q(email__iexact=email) | Q(username__iexact=email)
-        ).exists():
+        if email == (self.user.email or "").strip().lower():
+            return email
+        if (
+            User.objects.exclude(pk=self.user.pk)
+            .alias(email_lower=Lower("email"), username_lower=Lower("username"))
+            .filter(Q(email_lower=email) | Q(username_lower=email))
+            .exists()
+        ):
             raise ValidationError("This email address is already in use.")
         return email
 
     def save(self):
         first_name, *remaining_names = self.cleaned_data["full_name"].split(maxsplit=1)
-        self.user.first_name = first_name
-        self.user.last_name = remaining_names[0] if remaining_names else ""
-        self.user.email = self.cleaned_data["email"]
-        self.user.save(update_fields=("first_name", "last_name", "email"))
+        last_name = remaining_names[0] if remaining_names else ""
+        email = self.cleaned_data["email"]
+        if (
+            self.user.first_name != first_name
+            or self.user.last_name != last_name
+            or self.user.email != email
+        ):
+            self.user.first_name = first_name
+            self.user.last_name = last_name
+            self.user.email = email
+            self.user.save(update_fields=("first_name", "last_name", "email"))
 
-        self.profile.contact_number = self.cleaned_data["contact_number"].strip()
-        self.profile.location = self.cleaned_data["location"].strip()
-        self.profile.learning_goal = self.cleaned_data["learning_goal"].strip()
-        self.profile.save(update_fields=("contact_number", "location", "learning_goal", "updated_at"))
+        contact_number = self.cleaned_data["contact_number"].strip()
+        location = self.cleaned_data["location"].strip()
+        learning_goal = self.cleaned_data["learning_goal"].strip()
+        if (
+            self.profile.contact_number != contact_number
+            or self.profile.location != location
+            or self.profile.learning_goal != learning_goal
+        ):
+            self.profile.contact_number = contact_number
+            self.profile.location = location
+            self.profile.learning_goal = learning_goal
+            self.profile.save(
+                update_fields=("contact_number", "location", "learning_goal", "updated_at")
+            )
         return self.user
 
 
@@ -103,17 +126,28 @@ class RegistrationForm(UserCreationForm):
 
     def clean_username(self):
         username = self.cleaned_data["username"].strip()
-        if User.objects.filter(
-            Q(username__iexact=username) | Q(email__iexact=username)
-        ).exists():
+        username_lower = username.lower()
+        if (
+            User.objects.alias(
+                username_lower=Lower("username"),
+                email_lower=Lower("email"),
+            )
+            .filter(Q(username_lower=username_lower) | Q(email_lower=username_lower))
+            .exists()
+        ):
             raise ValidationError("That username is already in use.")
         return username
 
     def clean_email(self):
         email = self.cleaned_data["email"].strip().lower()
-        if User.objects.filter(
-            Q(email__iexact=email) | Q(username__iexact=email)
-        ).exists():
+        if (
+            User.objects.alias(
+                email_lower=Lower("email"),
+                username_lower=Lower("username"),
+            )
+            .filter(Q(email_lower=email) | Q(username_lower=email))
+            .exists()
+        ):
             raise ValidationError("An account with this email already exists.")
         return email
 

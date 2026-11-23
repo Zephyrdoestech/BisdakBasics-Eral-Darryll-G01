@@ -80,24 +80,27 @@ def profile(request):
             messages.success(request, "Your profile was saved successfully.")
             return redirect("accounts:profile")
 
-    completed_lessons = list(
-        LessonProgress.objects.filter(
-            user=request.user,
-            lesson__is_published=True,
-            completed_at__isnull=False,
-        )
-        .select_related("lesson")
-        .order_by("-completed_at")[:5]
-    )
-    completed_lesson_count = LessonProgress.objects.filter(
+    completed_lessons_qs = LessonProgress.objects.filter(
         user=request.user,
         lesson__is_published=True,
         completed_at__isnull=False,
-    ).count()
+    )
+    completed_lessons_page = list(
+        completed_lessons_qs.select_related("lesson")
+        .only("completed_at", "lesson__slug", "lesson__title")
+        .order_by("-completed_at")[:6]
+    )
+    if len(completed_lessons_page) > 5:
+        completed_lessons = completed_lessons_page[:5]
+        completed_lesson_count = completed_lessons_qs.count()
+    else:
+        completed_lessons = completed_lessons_page
+        completed_lesson_count = len(completed_lessons)
     practiced_phrase_count = PhrasePractice.objects.filter(user=request.user).count()
     latest_attempt = (
         LessonAttempt.objects.filter(user=request.user)
         .select_related("lesson")
+        .only("score", "is_correct", "lesson__title")
         .order_by("-attempted_at")
         .first()
     )

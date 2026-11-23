@@ -76,6 +76,10 @@ class Lesson(models.Model):
                 fields=["is_published", "category", "position"],
                 name="core_lesson_pub_cat_pos_idx",
             ),
+            models.Index(
+                fields=["is_published", "position", "id"],
+                name="core_lesson_pub_pos_id_idx",
+            ),
         ]
 
     def save(self, *args, **kwargs):
@@ -113,6 +117,12 @@ class LessonPhrase(models.Model):
 
     class Meta:
         ordering = ["position", "id"]
+        indexes = [
+            models.Index(
+                fields=["lesson", "position", "id"],
+                name="core_phrase_lesson_pos_idx",
+            ),
+        ]
 
     def __str__(self):
         return f"{self.cebuano_text} ({self.lesson.title})"
@@ -128,6 +138,13 @@ class LessonProgress(models.Model):
     class Meta:
         constraints = [
             models.UniqueConstraint(fields=("user", "lesson"), name="core_unique_lesson_progress")
+        ]
+        indexes = [
+            models.Index(
+                fields=["user", "-completed_at"],
+                condition=models.Q(completed_at__isnull=False),
+                name="core_progress_user_comp_idx",
+            ),
         ]
 
 
@@ -167,6 +184,10 @@ class LessonAttempt(models.Model):
             models.Index(
                 fields=["user", "lesson", "-attempted_at"],
                 name="core_attempt_user_les_at_idx",
+            ),
+            models.Index(
+                fields=["user", "-attempted_at"],
+                name="core_attempt_user_at_idx",
             ),
         ]
 
